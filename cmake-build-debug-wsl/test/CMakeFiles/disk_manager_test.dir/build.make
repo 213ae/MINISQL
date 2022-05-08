@@ -80,10 +80,9 @@ disk_manager_test_EXTERNAL_OBJECTS =
 test/disk_manager_test: test/CMakeFiles/disk_manager_test.dir/storage/disk_manager_test.cpp.o
 test/disk_manager_test: test/CMakeFiles/disk_manager_test.dir/build.make
 test/disk_manager_test: bin/libminisql_shared.so
-test/disk_manager_test: lib/libgtestd.a
 test/disk_manager_test: test/libminisql_test_main.so
 test/disk_manager_test: glog-build/libglogd.so.0.6.0
-test/disk_manager_test: lib/libgtestd.a
+test/disk_manager_test: lib/libgtestd.so.1.11.0
 test/disk_manager_test: test/CMakeFiles/disk_manager_test.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/mnt/d/Repos/minisql-master/cmake-build-debug-wsl/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable disk_manager_test"
 	cd /mnt/d/Repos/minisql-master/cmake-build-debug-wsl/test && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/disk_manager_test.dir/link.txt --verbose=$(VERBOSE)

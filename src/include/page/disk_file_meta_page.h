@@ -5,15 +5,15 @@
 
 #include "page/bitmap_page.h"
 
-static constexpr page_id_t MAX_VALID_PAGE_ID = (PAGE_SIZE - 8) / 4 * BitmapPage<PAGE_SIZE>::GetMaxSupportedSize();
+static constexpr page_id_t MAX_VALID_PAGE = (PAGE_SIZE - 8) / 4 * BitmapPage<PAGE_SIZE>::GetMaxSupportedSize();
 
 class DiskFileMetaPage {
 public:
-  uint32_t GetExtentNums() {
+  [[nodiscard]] uint32_t GetExtentNums() const {
     return num_extents_;
   }
 
-  uint32_t GetAllocatedPages() {
+  [[nodiscard]] uint32_t GetAllocatedPages() const {
     return num_allocated_pages_;
   }
 

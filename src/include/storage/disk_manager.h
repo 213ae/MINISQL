@@ -6,6 +6,7 @@
 #include <iostream>
 #include <mutex>
 #include <string>
+#include <vector>
 #include "common/config.h"
 #include "common/macros.h"
 #include "page/bitmap_page.h"

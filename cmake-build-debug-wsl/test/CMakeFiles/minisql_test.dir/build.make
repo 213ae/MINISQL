@@ -231,7 +231,7 @@ test/minisql_test: test/CMakeFiles/minisql_test.dir/main_test.cpp.o
 test/minisql_test: test/CMakeFiles/minisql_test.dir/build.make
 test/minisql_test: bin/libminisql_shared.so
 test/minisql_test: glog-build/libglogd.so.0.6.0
-test/minisql_test: lib/libgtestd.a
+test/minisql_test: lib/libgtestd.so.1.11.0
 test/minisql_test: test/CMakeFiles/minisql_test.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/mnt/d/Repos/minisql-master/cmake-build-debug-wsl/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Linking CXX executable minisql_test"
 	cd /mnt/d/Repos/minisql-master/cmake-build-debug-wsl/test && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/minisql_test.dir/link.txt --verbose=$(VERBOSE)

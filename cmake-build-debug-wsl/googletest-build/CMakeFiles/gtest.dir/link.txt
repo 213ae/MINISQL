@@ -1,2 +1,1 @@
-/usr/bin/ar qc ../lib/libgtestd.a  CMakeFiles/gtest.dir/src/gtest-all.cc.o
-/usr/bin/ranlib ../lib/libgtestd.a
+/usr/bin/c++ -fPIC -g  -shared -Wl,-soname,libgtestd.so.1.11.0 -o ../lib/libgtestd.so.1.11.0 CMakeFiles/gtest.dir/src/gtest-all.cc.o  -lpthread 

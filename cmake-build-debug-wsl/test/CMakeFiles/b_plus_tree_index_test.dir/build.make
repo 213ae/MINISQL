@@ -80,10 +80,9 @@ b_plus_tree_index_test_EXTERNAL_OBJECTS =
 test/b_plus_tree_index_test: test/CMakeFiles/b_plus_tree_index_test.dir/index/b_plus_tree_index_test.cpp.o
 test/b_plus_tree_index_test: test/CMakeFiles/b_plus_tree_index_test.dir/build.make
 test/b_plus_tree_index_test: bin/libminisql_shared.so
-test/b_plus_tree_index_test: lib/libgtestd.a
 test/b_plus_tree_index_test: test/libminisql_test_main.so
 test/b_plus_tree_index_test: glog-build/libglogd.so.0.6.0
-test/b_plus_tree_index_test: lib/libgtestd.a
+test/b_plus_tree_index_test: lib/libgtestd.so.1.11.0
 test/b_plus_tree_index_test: test/CMakeFiles/b_plus_tree_index_test.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/mnt/d/Repos/minisql-master/cmake-build-debug-wsl/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable b_plus_tree_index_test"
 	cd /mnt/d/Repos/minisql-master/cmake-build-debug-wsl/test && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/b_plus_tree_index_test.dir/link.txt --verbose=$(VERBOSE)

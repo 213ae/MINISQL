@@ -1,23 +1,77 @@
 #include "page/bitmap_page.h"
+#include "glog/logging.h"
+
+template<size_t PageSize>
+uint32_t BitmapPage<PageSize>::FindNextFreePage() {
+  for (uint32_t i = 0; i < MAX_CHARS; ++i) {
+    auto temp = (uint8_t)bytes[i];
+    if(temp < 0xff){
+      for (int j = 0; j < 8; ++j) {
+        if((temp & (0x80 >> j)) == 0) return i * 8 + j;
+      }
+      LOG(FATAL) << "something wrong in FindNextFreePage().1" << endl;
+    }
+  }
+  LOG(FATAL) << "something wrong in FindNextFreePage().2" << endl;
+  return 0;//该return不会发生
+}
 
 template<size_t PageSize>
 bool BitmapPage<PageSize>::AllocatePage(uint32_t &page_offset) {
-  return false;
+  if(page_allocated_ < GetMaxSupportedSize()) {
+    if(next_free_page_ < GetMaxSupportedSize()){
+      page_offset = next_free_page_;
+      next_free_page_++;
+    }else{
+      page_offset = FindNextFreePage();
+    }
+    uint32_t byte_index = page_offset / 8;
+    uint32_t bit_index = page_offset % 8;
+    if(IsPageFree(page_offset) == true){
+      bytes[byte_index] |= (0x80 >> bit_index);
+    }else{
+      LOG(FATAL) << "something wrong in AllocatePage().2" << endl;
+    }
+    page_allocated_++;
+    return true;
+  }else{
+    LOG(INFO) << "no available page" << endl;
+    return false;
+  }
 }
 
 template<size_t PageSize>
 bool BitmapPage<PageSize>::DeAllocatePage(uint32_t page_offset) {
-  return false;
+  if(IsPageFree(page_offset) == false) {
+    uint32_t byte_index = page_offset / 8;
+    uint32_t bit_index = page_offset % 8;
+    bytes[byte_index] &= (0xff ^ (0x80 >> bit_index));
+    page_allocated_--;
+    return true;
+  }else{
+    LOG(WARNING) << "this page is free" << endl;
+    return false;
+  }
 }
 
 template<size_t PageSize>
 bool BitmapPage<PageSize>::IsPageFree(uint32_t page_offset) const {
-  return false;
+  if(page_offset >= 0 && page_offset < GetMaxSupportedSize()){
+    uint32_t byte_index = page_offset / 8;
+    uint32_t bit_index = page_offset % 8;
+    return IsPageFreeLow(byte_index, bit_index);
+  }
+  else {
+    LOG(INFO) << "wrong page_offset:" << page_offset << endl;
+    return false;
+  }
 }
 
 template<size_t PageSize>
 bool BitmapPage<PageSize>::IsPageFreeLow(uint32_t byte_index, uint8_t bit_index) const {
-  return false;
+  auto temp = (uint8_t)bytes[byte_index];
+  uint8_t flag = (temp >> (7 - bit_index)) % 2;
+  return !flag;
 }
 
 template

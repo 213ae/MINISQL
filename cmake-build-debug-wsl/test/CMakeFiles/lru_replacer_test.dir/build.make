@@ -80,10 +80,9 @@ lru_replacer_test_EXTERNAL_OBJECTS =
 test/lru_replacer_test: test/CMakeFiles/lru_replacer_test.dir/buffer/lru_replacer_test.cpp.o
 test/lru_replacer_test: test/CMakeFiles/lru_replacer_test.dir/build.make
 test/lru_replacer_test: bin/libminisql_shared.so
-test/lru_replacer_test: lib/libgtestd.a
 test/lru_replacer_test: test/libminisql_test_main.so
 test/lru_replacer_test: glog-build/libglogd.so.0.6.0
-test/lru_replacer_test: lib/libgtestd.a
+test/lru_replacer_test: lib/libgtestd.so.1.11.0
 test/lru_replacer_test: test/CMakeFiles/lru_replacer_test.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/mnt/d/Repos/minisql-master/cmake-build-debug-wsl/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable lru_replacer_test"
 	cd /mnt/d/Repos/minisql-master/cmake-build-debug-wsl/test && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/lru_replacer_test.dir/link.txt --verbose=$(VERBOSE)

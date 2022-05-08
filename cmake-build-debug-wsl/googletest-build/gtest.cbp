@@ -18,12 +18,13 @@
 				</MakeCommands>
 			</Target>
 			<Target title="gtest_main">
-				<Option output="/mnt/d/Repos/minisql-master/cmake-build-debug-wsl/lib/libgtest_maind.a" prefix_auto="0" extension_auto="0"/>
+				<Option output="/mnt/d/Repos/minisql-master/cmake-build-debug-wsl/lib/libgtest_maind.so" prefix_auto="0" extension_auto="0"/>
 				<Option working_dir="/mnt/d/Repos/minisql-master/cmake-build-debug-wsl/googletest-build"/>
 				<Option object_output="./"/>
-				<Option type="2"/>
+				<Option type="3"/>
 				<Option compiler="gcc"/>
 				<Compiler>
+					<Add option="-DGTEST_CREATE_SHARED_LIBRARY=1"/>
 					<Add option="-DENABLE_DEBUG"/>
 					<Add directory="/mnt/d/Repos/minisql-master/src/include"/>
 					<Add directory="/mnt/d/Repos/minisql-master/test/include"/>
@@ -46,12 +47,13 @@
 				</MakeCommands>
 			</Target>
 			<Target title="gtest_main/fast">
-				<Option output="/mnt/d/Repos/minisql-master/cmake-build-debug-wsl/lib/libgtest_maind.a" prefix_auto="0" extension_auto="0"/>
+				<Option output="/mnt/d/Repos/minisql-master/cmake-build-debug-wsl/lib/libgtest_maind.so" prefix_auto="0" extension_auto="0"/>
 				<Option working_dir="/mnt/d/Repos/minisql-master/cmake-build-debug-wsl/googletest-build"/>
 				<Option object_output="./"/>
-				<Option type="2"/>
+				<Option type="3"/>
 				<Option compiler="gcc"/>
 				<Compiler>
+					<Add option="-DGTEST_CREATE_SHARED_LIBRARY=1"/>
 					<Add option="-DENABLE_DEBUG"/>
 					<Add directory="/mnt/d/Repos/minisql-master/src/include"/>
 					<Add directory="/mnt/d/Repos/minisql-master/test/include"/>
@@ -74,12 +76,13 @@
 				</MakeCommands>
 			</Target>
 			<Target title="gtest">
-				<Option output="/mnt/d/Repos/minisql-master/cmake-build-debug-wsl/lib/libgtestd.a" prefix_auto="0" extension_auto="0"/>
+				<Option output="/mnt/d/Repos/minisql-master/cmake-build-debug-wsl/lib/libgtestd.so" prefix_auto="0" extension_auto="0"/>
 				<Option working_dir="/mnt/d/Repos/minisql-master/cmake-build-debug-wsl/googletest-build"/>
 				<Option object_output="./"/>
-				<Option type="2"/>
+				<Option type="3"/>
 				<Option compiler="gcc"/>
 				<Compiler>
+					<Add option="-DGTEST_CREATE_SHARED_LIBRARY=1"/>
 					<Add option="-DENABLE_DEBUG"/>
 					<Add directory="/mnt/d/Repos/minisql-master/src/include"/>
 					<Add directory="/mnt/d/Repos/minisql-master/test/include"/>
@@ -102,12 +105,13 @@
 				</MakeCommands>
 			</Target>
 			<Target title="gtest/fast">
-				<Option output="/mnt/d/Repos/minisql-master/cmake-build-debug-wsl/lib/libgtestd.a" prefix_auto="0" extension_auto="0"/>
+				<Option output="/mnt/d/Repos/minisql-master/cmake-build-debug-wsl/lib/libgtestd.so" prefix_auto="0" extension_auto="0"/>
 				<Option working_dir="/mnt/d/Repos/minisql-master/cmake-build-debug-wsl/googletest-build"/>
 				<Option object_output="./"/>
-				<Option type="2"/>
+				<Option type="3"/>
 				<Option compiler="gcc"/>
 				<Compiler>
+					<Add option="-DGTEST_CREATE_SHARED_LIBRARY=1"/>
 					<Add option="-DENABLE_DEBUG"/>
 					<Add directory="/mnt/d/Repos/minisql-master/src/include"/>
 					<Add directory="/mnt/d/Repos/minisql-master/test/include"/>

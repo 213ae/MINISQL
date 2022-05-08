@@ -1,5 +1,4 @@
 #include <unordered_set>
-
 #include "gtest/gtest.h"
 #include "storage/disk_manager.h"
 
@@ -7,8 +6,8 @@ TEST(DiskManagerTest, BitMapPageTest) {
   const size_t size = 512;
   char buf[size];
   memset(buf, 0, size);
-  BitmapPage<size> *bitmap = reinterpret_cast<BitmapPage<size> *>(buf);
-  auto num_pages = bitmap->GetMaxSupportedSize();
+  auto *bitmap = reinterpret_cast<BitmapPage<size> *>(buf);
+  auto num_pages = BitmapPage<size>::GetMaxSupportedSize();
   for (uint32_t i = 0; i < num_pages; i++) {
     ASSERT_TRUE(bitmap->IsPageFree(i));
   }
@@ -33,7 +32,7 @@ TEST(DiskManagerTest, BitMapPageTest) {
   ASSERT_FALSE(bitmap->AllocatePage(ofs));
 }
 
-TEST(DiskManagerTest, DISABLED_FreePageAllocationTest) {
+TEST(DiskManagerTest, FreePageAllocationTest) {
   std::string db_name = "disk_test.db";
   DiskManager *disk_mgr = new DiskManager(db_name);
   int extent_nums = 2;

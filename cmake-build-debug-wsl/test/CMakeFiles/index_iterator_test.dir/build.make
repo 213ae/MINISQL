@@ -80,10 +80,9 @@ index_iterator_test_EXTERNAL_OBJECTS =
 test/index_iterator_test: test/CMakeFiles/index_iterator_test.dir/index/index_iterator_test.cpp.o
 test/index_iterator_test: test/CMakeFiles/index_iterator_test.dir/build.make
 test/index_iterator_test: bin/libminisql_shared.so
-test/index_iterator_test: lib/libgtestd.a
 test/index_iterator_test: test/libminisql_test_main.so
 test/index_iterator_test: glog-build/libglogd.so.0.6.0
-test/index_iterator_test: lib/libgtestd.a
+test/index_iterator_test: lib/libgtestd.so.1.11.0
 test/index_iterator_test: test/CMakeFiles/index_iterator_test.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/mnt/d/Repos/minisql-master/cmake-build-debug-wsl/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable index_iterator_test"
 	cd /mnt/d/Repos/minisql-master/cmake-build-debug-wsl/test && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/index_iterator_test.dir/link.txt --verbose=$(VERBOSE)

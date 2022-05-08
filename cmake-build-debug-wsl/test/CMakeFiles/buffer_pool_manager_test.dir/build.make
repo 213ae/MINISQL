@@ -80,10 +80,9 @@ buffer_pool_manager_test_EXTERNAL_OBJECTS =
 test/buffer_pool_manager_test: test/CMakeFiles/buffer_pool_manager_test.dir/buffer/buffer_pool_manager_test.cpp.o
 test/buffer_pool_manager_test: test/CMakeFiles/buffer_pool_manager_test.dir/build.make
 test/buffer_pool_manager_test: bin/libminisql_shared.so
-test/buffer_pool_manager_test: lib/libgtestd.a
 test/buffer_pool_manager_test: test/libminisql_test_main.so
 test/buffer_pool_manager_test: glog-build/libglogd.so.0.6.0
-test/buffer_pool_manager_test: lib/libgtestd.a
+test/buffer_pool_manager_test: lib/libgtestd.so.1.11.0
 test/buffer_pool_manager_test: test/CMakeFiles/buffer_pool_manager_test.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/mnt/d/Repos/minisql-master/cmake-build-debug-wsl/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable buffer_pool_manager_test"
 	cd /mnt/d/Repos/minisql-master/cmake-build-debug-wsl/test && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/buffer_pool_manager_test.dir/link.txt --verbose=$(VERBOSE)
