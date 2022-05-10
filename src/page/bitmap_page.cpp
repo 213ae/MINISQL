@@ -18,13 +18,14 @@ uint32_t BitmapPage<PageSize>::FindNextFreePage() {
 
 template<size_t PageSize>
 bool BitmapPage<PageSize>::AllocatePage(uint32_t &page_offset) {
-  if(page_allocated_ < GetMaxSupportedSize()) {
-    if(next_free_page_ < GetMaxSupportedSize()){
+  if(page_allocated_ < GetMaxSupportedSize()) {//检查该位图页管理的页中是否有空闲页
+    if(next_free_page_ < GetMaxSupportedSize()){//在所有的页都被分配过一次之前，先按页的顺序从小到大分配
       page_offset = next_free_page_;
       next_free_page_++;
-    }else{
+    }else{//在所有的页都至少被分配过一次之后，仍有可用的页，说明有页被删除，查找被删除的页
       page_offset = FindNextFreePage();
     }
+    //更新位图页元信息
     uint32_t byte_index = page_offset / 8;
     uint32_t bit_index = page_offset % 8;
     if(IsPageFree(page_offset) == true){
@@ -43,6 +44,7 @@ bool BitmapPage<PageSize>::AllocatePage(uint32_t &page_offset) {
 template<size_t PageSize>
 bool BitmapPage<PageSize>::DeAllocatePage(uint32_t page_offset) {
   if(IsPageFree(page_offset) == false) {
+    //更新位图页元信息
     uint32_t byte_index = page_offset / 8;
     uint32_t bit_index = page_offset % 8;
     bytes[byte_index] &= (0xff ^ (0x80 >> bit_index));

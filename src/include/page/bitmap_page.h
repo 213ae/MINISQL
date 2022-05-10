@@ -16,7 +16,7 @@ public:
   static constexpr size_t GetMaxSupportedSize() { return 8 * MAX_CHARS; }
 
   /**
-   * @param page_offset Index in extent of the page allocated.
+   * @param page_offset （是返回值，通过它获取到分配的页号）Index in extent of the page allocated.
    * @return true if successfully allocate a page.
    */
   bool AllocatePage(uint32_t &page_offset);
@@ -40,13 +40,15 @@ private:
    * @return true if a bit is 0, false if 1.
    */
   [[nodiscard]] bool IsPageFreeLow(uint32_t byte_index, uint8_t bit_index) const;
-  /** Note: need to update if modify page structure.
-   * MAX_CHARS也就是BITMAP_CONTENT_SIZE的计算公式，更改元信息时该公式需更新
-   */
-   /**寻找下一个空闲页
+
+   /**寻找下一个（被删除的）空闲页，
+    * todo 采用直接遍历，因此有优化空间，可以用堆维护（被删除的）空闲页，在初始化磁盘管理器时，遍历一次位图页，初始化堆
     */
   uint32_t FindNextFreePage();
 
+  /** Note: need to update if modify page structure.
+   * MAX_CHARS也就是BITMAP_CONTENT_SIZE的计算公式，更改元信息（比如增加一个堆的指针）时该公式需更新
+   */
   static constexpr size_t MAX_CHARS = PageSize - 2 * sizeof(uint32_t);
 
 
