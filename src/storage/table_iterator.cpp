@@ -67,5 +67,5 @@ TableIterator &TableIterator::operator++() {
 TableIterator TableIterator::operator++(int) {
   TableIterator old(*this);
   ++*this;
-  return (const TableIterator)old;
+  return old;
 }

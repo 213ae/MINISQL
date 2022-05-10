@@ -18,7 +18,7 @@ public:
 
   explicit TableIterator(TableHeap* table_heap, Transaction* txn = nullptr);
 
-  explicit TableIterator(const TableIterator &other);
+  TableIterator(const TableIterator &other);
 
   virtual ~TableIterator();
 

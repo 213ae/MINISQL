@@ -99,8 +99,7 @@ bool TableHeap::GetTuple(Row *row, Transaction *txn) {
 }
 
 TableIterator TableHeap::Begin(Transaction *txn) {
-
-  return TableIterator();
+  return TableIterator(this, txn);
 }
 
 TableIterator TableHeap::End() {
