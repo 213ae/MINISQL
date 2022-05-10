@@ -85,6 +85,21 @@ TEST(TupleTest, FieldSerializeDeserializeTest) {
     heap->Free(df);
     df = nullptr;
   }
+  char buf[1024];
+  Column *tcol;
+  auto *col = ALLOC_P(heap, Column)("column_name", kTypeChar, 64, 123, true, false);
+  col->SerializeTo(buf);
+  uint32_t size = col->GetSerializedSize();
+  Column::DeserializeFrom(buf, tcol, heap);
+  vector<Column*> cols{tcol, col};
+  Schema *tsch;
+  auto sch = ALLOC_P(heap, Schema)(cols);
+  sch->SerializeTo(buf);
+  size = sch->GetSerializedSize();
+  Schema::DeserializeFrom(buf, tsch, heap);
+  if(size < 10){
+    return ;
+  }
 }
 
 TEST(TupleTest, RowTest) {

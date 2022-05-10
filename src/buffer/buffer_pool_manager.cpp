@@ -21,6 +21,14 @@ BufferPoolManager::~BufferPoolManager() {
 
 Page *BufferPoolManager::FetchPage(page_id_t page_id) {
   // 1.     Search the page table for the requested page (P).
+  if(page_id == INVALID_PAGE_ID) {
+    LOG(WARNING) << "Can not fetch invalid page id";
+    return nullptr;
+  }
+  if(disk_manager_->IsPageFree(page_id)){
+    LOG(WARNING) << "This page is free.";
+    return nullptr;
+  }
   if(page_table_.find(page_id) != page_table_.end()) {
     // 1.1    If P exists, pin it and return it immediately.
     replacer_->Pin(page_table_[page_id]);

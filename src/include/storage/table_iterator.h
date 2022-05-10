@@ -7,12 +7,16 @@
 
 
 class TableHeap;
-
+/**
+ * 只读前向迭代器，可用于遍历表
+ */
 class TableIterator {
 
 public:
   // you may define your own constructor based on your member variables
   explicit TableIterator();
+
+  explicit TableIterator(TableHeap* table_heap, Transaction* txn = nullptr);
 
   explicit TableIterator(const TableIterator &other);
 
@@ -31,6 +35,11 @@ public:
   TableIterator operator++(int);
 
 private:
+  TableHeap* table_heap;
+  RowId rid;
+  Row *row;
+  Transaction* txn;
+
   // add your own private member variables here
 };
 

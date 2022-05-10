@@ -16,15 +16,19 @@ bool LRUReplacer::Victim(frame_id_t *frame_id) {
 }
 
 void LRUReplacer::Pin(frame_id_t frame_id) {
-  auto iter = remove(lru_list.begin(), lru_list.end(), frame_id);
-  lru_list.erase(iter, lru_list.end());
+  if ((size_t)frame_id < capacity) {
+    auto iter = remove(lru_list.begin(), lru_list.end(), frame_id);
+    lru_list.erase(iter, lru_list.end());
+  }
 }
 
 void LRUReplacer::Unpin(frame_id_t frame_id) {
-  for (int & iter : lru_list) {
-    if(iter == frame_id) return;
+  if ((size_t)frame_id < capacity) {
+    for (int &iter : lru_list) {
+      if (iter == frame_id) return;
+    }
+    lru_list.emplace_back(frame_id);
   }
-  lru_list.emplace_back(frame_id);
 }
 
 size_t LRUReplacer::Size() {

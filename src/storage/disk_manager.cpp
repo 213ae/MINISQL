@@ -34,12 +34,15 @@ void DiskManager::Close() {
 
 void DiskManager::ReadPage(page_id_t logical_page_id, char *page_data) {
   ASSERT(logical_page_id >= 0, "Invalid page id.");
-  ReadPhysicalPage(MapPageId(logical_page_id), page_data);
+  if(!IsPageFree(logical_page_id)) ReadPhysicalPage(MapPageId(logical_page_id), page_data);
+  else LOG(WARNING) << "Invalid page id.";
 }
 
 void DiskManager::WritePage(page_id_t logical_page_id, const char *page_data) {
   ASSERT(logical_page_id >= 0, "Invalid page id.");
-  WritePhysicalPage(MapPageId(logical_page_id), page_data);
+  if (!IsPageFree(logical_page_id)) WritePhysicalPage(MapPageId(logical_page_id), page_data);
+  else LOG(WARNING) << "Invalid page id.";
+
 }
 
 page_id_t DiskManager::AllocatePage() {

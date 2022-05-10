@@ -102,4 +102,4 @@ private:
   MemHeap *heap_{nullptr};
 };
 
-#endif //MINISQL_TUPLE_H
+#endif //MINISQL_ROW_H

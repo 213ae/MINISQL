@@ -23,7 +23,9 @@ public:
     return new(buf) TableHeap(buffer_pool_manager, first_page_id, schema, log_manager, lock_manager);
   }
 
-  ~TableHeap() {}
+  ~TableHeap() {
+    FreeHeap();
+  }
 
   /**
    * Insert a tuple into the table. If the tuple is too large (>= page_size), return false.
@@ -48,7 +50,7 @@ public:
    * @param[in] txn Transaction performing the update
    * @return true is update is successful.
    */
-  bool UpdateTuple(const Row &row, const RowId &rid, Transaction *txn);
+  bool UpdateTuple(Row &row, const RowId &rid, Transaction *txn);
 
   /**
    * Called on Commit/Abort to actually delete a tuple or rollback an insert.
@@ -97,13 +99,16 @@ private:
    * create table heap and initialize first page
    */
   explicit TableHeap(BufferPoolManager *buffer_pool_manager, Schema *schema, Transaction *txn,
-                     LogManager *log_manager, LockManager *lock_manager) :
-          buffer_pool_manager_(buffer_pool_manager),
+                     LogManager *log_manager, LockManager *lock_manager)
+        : buffer_pool_manager_(buffer_pool_manager),
           schema_(schema),
           log_manager_(log_manager),
           lock_manager_(lock_manager) {
-    ASSERT(false, "Not implemented yet.");
-  };
+    auto *table_page = reinterpret_cast<TablePage *>(buffer_pool_manager->NewPage(first_page_id_));
+    table_page->Init(first_page_id_, INVALID_PAGE_ID, log_manager, txn);
+    buffer_pool_manager->UnpinPage(first_page_id_, true);
+    //从bufmgr获取新磁盘页，并对页初始化
+  }
 
   /**
    * load existing table heap by first_page_id
@@ -114,7 +119,8 @@ private:
             first_page_id_(first_page_id),
             schema_(schema),
             log_manager_(log_manager),
-            lock_manager_(lock_manager) {}
+            lock_manager_(lock_manager) {
+  }
 
 private:
   BufferPoolManager *buffer_pool_manager_;

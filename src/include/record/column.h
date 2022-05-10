@@ -2,9 +2,13 @@
 #define MINISQL_COLUMN_H
 
 #include <string>
+#include <cstring>
+#include <cstdlib>
 
 #include "common/macros.h"
 #include "record/types.h"
+
+using namespace std;
 
 class Column {
   friend class Schema;
@@ -32,7 +36,7 @@ public:
 
   uint32_t GetSerializedSize() const;
 
-  static uint32_t DeserializeFrom(char *buf, Column *&column, MemHeap *heap);
+  static uint32_t DeserializeFrom(const char *buf, Column *&column, MemHeap *heap);
 
 private:
   static constexpr uint32_t COLUMN_MAGIC_NUM = 210928;
