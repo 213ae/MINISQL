@@ -2,7 +2,7 @@
 #define MINISQL_FIELD_H
 
 #include <cstring>
-
+#include <iostream>
 #include "common/config.h"
 #include "common/macros.h"
 #include "record/types.h"
@@ -84,6 +84,15 @@ public:
     return is_null_;
   }
 
+  inline void PrintField(){
+    switch (type_id_) {
+      case 1: std::cout << value_.integer_ << " "; break;
+      case 2: std::cout << value_.float_ << " "; break;
+      case 3: std::cout << value_.chars_ << " "; break;
+      default: break;
+    }
+  }
+
   inline uint32_t GetLength() const {
     return Type::GetInstance(type_id_)->GetLength(*this);
   }
@@ -137,17 +146,17 @@ public:
     std::swap(first.is_null_, second.is_null_);
     std::swap(first.manage_data_, second.manage_data_);
   }
-
 protected:
+  TypeId type_id_;
+  uint32_t len_;
+  bool is_null_{false};
+  bool manage_data_{false};
+public:
   union Val {
     int32_t integer_;
     float float_;
     char *chars_;
   } value_;
-  TypeId type_id_;
-  uint32_t len_;
-  bool is_null_{false};
-  bool manage_data_{false};
 };
 
 

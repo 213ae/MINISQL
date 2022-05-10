@@ -1,5 +1,4 @@
 #include "storage/table_heap.h"
-//todo 空间不足时分配新页
 bool TableHeap::InsertTuple(Row &row, Transaction *txn) {
   if(row.GetSerializedSize(schema_) > TablePage::SIZE_MAX_ROW){ return false; }
   auto *table_page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(first_page_id_));
@@ -8,7 +7,7 @@ bool TableHeap::InsertTuple(Row &row, Transaction *txn) {
     buffer_pool_manager_->UnpinPage(table_page->GetPageId(), false);
     table_page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(table_page->GetNextPageId()));
   }
-  if(!flag){
+  if(flag){
     page_id_t next_page_id, cur_page_id = table_page->GetPageId();
     buffer_pool_manager_->NewPage(next_page_id);
     table_page->SetNextPageId(next_page_id);

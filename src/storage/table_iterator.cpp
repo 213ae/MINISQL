@@ -15,18 +15,12 @@ TableIterator::TableIterator(const TableIterator &other) {
   table_heap = other.table_heap;
   rid = other.rid;
   txn = other.txn;
-  new (row)Row(*other.row);
+  delete row;
+  row = new Row(*other.row);
 }
 
-TableIterator::~TableIterator() = default;
 
-bool TableIterator::operator==(const TableIterator &itr) const {
-  return rid == itr.rid;
-}
-
-bool TableIterator::operator!=(const TableIterator &itr) const {
-  return !(*this == itr);
-}
+TableIterator::~TableIterator() { delete row; }
 
 const Row &TableIterator::operator*() {
   if(rid.GetPageId() != INVALID_PAGE_ID) {

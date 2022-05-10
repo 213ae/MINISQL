@@ -180,6 +180,7 @@ uint32_t TypeFloat::GetSerializedSize(const Field &field, bool is_null) const {
   return GetTypeSize(type_id_);
 }
 
+
 CmpBool TypeFloat::CompareEquals(const Field &left, const Field &right) const {
   ASSERT(left.CheckComparable(right), "Not comparable.");
   if (left.IsNull() || right.IsNull()) {

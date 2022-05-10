@@ -1,6 +1,5 @@
 #include <vector>
 #include <unordered_map>
-
 #include "common/instance.h"
 #include "gtest/gtest.h"
 #include "record/field.h"
@@ -10,7 +9,14 @@
 
 static string db_file_name = "table_heap_test.db";
 using Fields = std::vector<Field>;
-
+using namespace std;
+void PrintRow(Row row){
+  cout << row.GetRowId().GetPageId() << " " <<  row.GetRowId().GetSlotNum() << " " << row.GetFieldCount() << " ";
+  for(auto field : row.GetFields()){
+    field->PrintField();
+  }
+  cout << endl;
+}
 TEST(TableHeapTest, TableHeapSampleTest) {
   // init testing instance
   DBStorageEngine engine(db_file_name);
@@ -40,7 +46,9 @@ TEST(TableHeapTest, TableHeapSampleTest) {
     row_values[row.GetRowId().Get()] = fields;
     delete[] characters;
   }
-
+  for(TableIterator itr = table_heap->Begin(); itr!=table_heap->End(); ++itr){
+    PrintRow(*itr);
+  }
   ASSERT_EQ(row_nums, row_values.size());
   for (auto row_kv : row_values) {
     Row row(RowId(row_kv.first));

@@ -22,9 +22,9 @@ public:
 
   virtual ~TableIterator();
 
-  inline bool operator==(const TableIterator &itr) const;
+  inline bool operator==(const TableIterator &itr) const { return rid == itr.rid; }
 
-  inline bool operator!=(const TableIterator &itr) const;
+  inline bool operator!=(const TableIterator &itr) const { return !(*this == itr); }
 
   const Row &operator*();
 
@@ -35,9 +35,9 @@ public:
   TableIterator operator++(int);
 
 private:
-  TableHeap* table_heap;
+  TableHeap* table_heap{nullptr};
   RowId rid;
-  Row *row;
+  Row *row{nullptr};
   Transaction* txn;
 
   // add your own private member variables here
