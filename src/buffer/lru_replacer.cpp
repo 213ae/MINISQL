@@ -1,6 +1,10 @@
 #include "buffer/lru_replacer.h"
 
-LRUReplacer::LRUReplacer(size_t num_pages) : capacity(num_pages){}
+LRUReplacer::LRUReplacer(size_t num_pages) : capacity(num_pages){
+  for (size_t i = 0; i < num_pages; ++i) {
+    lru_list.emplace_back(i);
+  }
+}
 
 LRUReplacer::~LRUReplacer() = default;
 
@@ -24,7 +28,7 @@ void LRUReplacer::Pin(frame_id_t frame_id) {
 
 void LRUReplacer::Unpin(frame_id_t frame_id) {
   if ((size_t)frame_id < capacity) {
-    for (int &iter : lru_list) {
+    for (int &iter : lru_list) {//检查frame有没有被pin过，没有被pin过则unpin无效
       if (iter == frame_id) return;
     }
     lru_list.emplace_back(frame_id);

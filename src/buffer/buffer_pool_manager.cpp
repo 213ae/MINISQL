@@ -26,9 +26,10 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
     return nullptr;
   }
   if(disk_manager_->IsPageFree(page_id)){
-    LOG(WARNING) << "This page is free.";
+    LOG(WARNING) << "This page is not allocated.";
     return nullptr;
   }
+  //在缓冲区，从缓冲区取
   if(page_table_.find(page_id) != page_table_.end()) {
     // 1.1    If P exists, pin it and return it immediately.
     replacer_->Pin(page_table_[page_id]);
@@ -37,17 +38,19 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
   }
   // 1.2    If P does not exist, find a replacement page (R) from either the free list or the replacer.
   //        Note that pages are always found from the free list first.
+  //不在缓冲区，从磁盘读取
   frame_id_t frame_id_will_used;
-  if(!free_list_.empty()){
+  if(!free_list_.empty()){//优先从free_list取页
     frame_id_will_used = free_list_.front();
     free_list_.pop_front();
+    //从磁盘读取页，初始化页对象，更新page_table，固定页，更新页
     disk_manager_->ReadPage(page_id, pages_[frame_id_will_used].data_);
     pages_[frame_id_will_used].page_id_ = page_id;
     page_table_.insert(pair(page_id, frame_id_will_used));
     replacer_->Pin(frame_id_will_used);
     pages_[frame_id_will_used].pin_count_++;
     return &pages_[frame_id_will_used];
-  }else{
+  }else{//free_list为空，从replacer_取
     if(replacer_->Victim(&frame_id_will_used)){
       // 2.     If R is dirty, write it back to the disk.
       if(pages_[frame_id_will_used].IsDirty()){
