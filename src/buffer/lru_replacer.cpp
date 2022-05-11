@@ -1,9 +1,10 @@
 #include "buffer/lru_replacer.h"
 
 LRUReplacer::LRUReplacer(size_t num_pages) : capacity(num_pages){
-  for (size_t i = 0; i < num_pages; ++i) {
+/*  for (size_t i = 0; i < num_pages; ++i) {
     lru_list.emplace_back(i);
-  }
+  }*/
+//错误的
 }
 
 LRUReplacer::~LRUReplacer() = default;

@@ -74,6 +74,7 @@ int TablePage::UpdateTuple(const Row &new_row, Row *old_row, Schema *schema,
   uint32_t tuple_size = GetTupleSize(slot_num);
   // If the tuple is deleted, abort.
   if (IsDeleted(tuple_size)) {
+    LOG(WARNING) << "The tuple you want to update is deleted.";
     return 2;
   }
   // If there is not enough space to update, we need to update via delete followed by an insert (not enough space).
