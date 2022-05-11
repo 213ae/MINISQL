@@ -28,6 +28,7 @@
 
 class TablePage : public Page {
 public:
+  /**初始化新页，指定表中前一页的id*/
   void Init(page_id_t page_id, page_id_t prev_id, LogManager *log_mgr, Transaction *txn);
 
   page_id_t GetTablePageId() { return *reinterpret_cast<page_id_t *>(GetData()); }
@@ -68,6 +69,7 @@ private:
     memcpy(GetData() + OFFSET_FREE_SPACE, &free_space_pointer, sizeof(uint32_t));
   }
 
+  /**需要注意的是，TupleCount并非当前页已使用槽数，而是至少分配过一次内容的槽数*/
   uint32_t GetTupleCount() { return *reinterpret_cast<uint32_t *>(GetData() + OFFSET_TUPLE_COUNT); }
 
   void SetTupleCount(uint32_t tuple_count) { memcpy(GetData() + OFFSET_TUPLE_COUNT, &tuple_count, sizeof(uint32_t)); }
