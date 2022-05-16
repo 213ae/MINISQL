@@ -134,15 +134,18 @@ bool BufferPoolManager::DeletePage(page_id_t page_id) {
 }
 
 bool BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty) {
+  if(page_id == INVALID_PAGE_ID) {
+    LOG(INFO) << "Can not unpin INVALID_PAGE_ID";
+    return false;
+  }
   if(page_table_.find(page_id) != page_table_.end()) {
     if(pages_[page_table_[page_id]].pin_count_ > 0) {
-      pages_[page_table_[page_id]].pin_count_--;
-      pages_[page_table_[page_id]].is_dirty_ = is_dirty;
-      replacer_->Unpin(page_table_[page_id]);
+      if(!pages_[page_table_[page_id]].is_dirty_) pages_[page_table_[page_id]].is_dirty_ = is_dirty;
+      if((--pages_[page_table_[page_id]].pin_count_) == 0) replacer_->Unpin(page_table_[page_id]);
       return true;
     }
     else{
-      LOG(WARNING) << "It is unpined";
+      LOG(INFO) << "It is unpined";
       return false ;
     }
   }else{

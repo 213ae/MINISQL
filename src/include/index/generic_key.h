@@ -21,8 +21,7 @@ public:
   inline void DeserializeToKey(Row &key, Schema *schema) const {
     uint32_t ofs = key.DeserializeFrom(const_cast<char *>(data), schema);
     ASSERT(ofs <= KeySize, "Index key size exceed max key size.");
-    return;
-  }
+ }
 
   // compare
   inline bool operator==(const GenericKey &other) {

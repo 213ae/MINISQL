@@ -14,7 +14,7 @@ TEST(BPlusTreeTests, SampleTest) {
   BPlusTree<int, int, BasicComparator<int>> tree(0, engine.bpm_, comparator, 4, 4);
   TreeFileManagers mgr("tree_");
   // Prepare data
-  const int n = 30;
+  const int n = 300;
   vector<int> keys;
   vector<int> values;
   vector<int> delete_seq;
@@ -35,6 +35,7 @@ TEST(BPlusTreeTests, SampleTest) {
   // Insert data
   for (int i = 0; i < n; i++) {
     tree.Insert(keys[i], values[i]);
+   //tree.PrintTree(mgr[0]);
   }
   ASSERT_TRUE(tree.Check());
   // Print tree
@@ -49,6 +50,7 @@ TEST(BPlusTreeTests, SampleTest) {
   // Delete half keys
   for (int i = 0; i < n / 2; i++) {
     tree.Remove(delete_seq[i]);
+    //tree.PrintTree(mgr[1]);
   }
   tree.PrintTree(mgr[1]);
   // Check valid

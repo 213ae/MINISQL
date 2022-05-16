@@ -2,6 +2,7 @@
 #define MINISQL_B_PLUS_TREE_INTERNAL_PAGE_H
 
 #include <queue>
+#include <string.h>
 #include "page/b_plus_tree_page.h"
 
 #define B_PLUS_TREE_INTERNAL_PAGE_TYPE BPlusTreeInternalPage<KeyType, ValueType, KeyComparator>

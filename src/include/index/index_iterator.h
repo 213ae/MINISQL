@@ -7,9 +7,12 @@
 
 INDEX_TEMPLATE_ARGUMENTS
 class IndexIterator {
+  using LeafPage = BPlusTreeLeafPage<KeyType, ValueType, KeyComparator>;
 public:
   // you may define your own constructor based on your member variables
   explicit IndexIterator();
+
+  explicit IndexIterator(page_id_t page_id, BufferPoolManager* bpm, int index = 0);
 
   ~IndexIterator();
 
@@ -26,6 +29,10 @@ public:
   bool operator!=(const IndexIterator &itr) const;
 
 private:
+  page_id_t current_page_id{INVALID_PAGE_ID};
+  LeafPage *page{nullptr};
+  int item_index{0};
+  BufferPoolManager*buffer_pool_manager{nullptr};
   // add your own private member variables here
 };
 

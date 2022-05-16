@@ -22,7 +22,7 @@ TEST(BPlusTreeTests, BPlusTreeIndexGenericKeyTest) {
   auto *key_schema = Schema::ShallowCopySchema(&table_schema, index_key_map, &heap);
   std::vector<Field> fields{
           Field(TypeId::kTypeInt, 27),
-          Field(TypeId::kTypeChar, const_cast<char *>("minisql"), 7, true)
+          Field(TypeId::kTypeChar, nullptr/*const_cast<char *>("minisql")*/, 20, true)
   };
   Row key(fields);
   INDEX_KEY_TYPE k1;

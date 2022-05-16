@@ -9,6 +9,7 @@ TableIterator::TableIterator(TableHeap* table_heap, Transaction* txn) : table_he
   page->GetFirstTupleRid(&rid);
   row = new Row(rid);
   table_heap->GetTuple(row, txn);
+  table_heap->buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
 }
 
 TableIterator::TableIterator(const TableIterator &other) {
@@ -20,7 +21,9 @@ TableIterator::TableIterator(const TableIterator &other) {
 }
 
 
-TableIterator::~TableIterator() { delete row; }
+TableIterator::~TableIterator() {
+  delete row;
+}
 
 const Row &TableIterator::operator*() {
   if(rid.GetPageId() != INVALID_PAGE_ID) {
@@ -48,6 +51,7 @@ TableIterator &TableIterator::operator++() {
     row->SetRowId(rid);
     table_heap->GetTuple(row, txn);
   }else if(page->GetNextPageId() != INVALID_PAGE_ID){
+    table_heap->buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
     page = reinterpret_cast<TablePage *>(table_heap->buffer_pool_manager_->FetchPage(page->GetNextPageId()));
     page->GetFirstTupleRid(&rid);
     row->SetRowId(rid);
@@ -55,6 +59,7 @@ TableIterator &TableIterator::operator++() {
   }else{
     new (this)TableIterator();
   }
+  table_heap->buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
   return *this;
 }
 

@@ -51,13 +51,13 @@ public:
   INDEXITERATOR_TYPE End();
 
   // expose for test purpose
-  Page *FindLeafPage(const KeyType &key, bool leftMost = false);
+  Page *FindLeafPage(const KeyType &key, page_id_t page_id = INVALID_PAGE_ID, bool leftMost = false);
 
   // used to check whether all pages are unpinned
   bool Check();
 
   // destroy the b plus tree
-  void Destroy();
+  void Destroy(page_id_t current_page_id);
 
   void PrintTree(std::ofstream &out) {
     if (IsEmpty()) {
@@ -65,7 +65,7 @@ public:
     }
     out << "digraph G {" << std::endl;
     Page *root_page = buffer_pool_manager_->FetchPage(root_page_id_);
-    BPlusTreePage *node = reinterpret_cast<BPlusTreePage *>(root_page);
+    auto *node = reinterpret_cast<BPlusTreePage *>(root_page);
     ToGraph(node, buffer_pool_manager_, out);
     out << "}" << std::endl;
   }
@@ -78,18 +78,26 @@ private:
   void InsertIntoParent(BPlusTreePage *old_node, const KeyType &key, BPlusTreePage *new_node,
                         Transaction *transaction = nullptr);
 
-  template<typename N>
-  N *Split(N *node);
+ /* template<typename N>
+  N *Split(N *node, Transaction *transaction);*/
+  LeafPage *Split(LeafPage *node, Transaction *transaction);
+
+  InternalPage *Split(InternalPage *node, Transaction *transaction);
 
   template<typename N>
-  bool CoalesceOrRedistribute(N *node, Transaction *transaction = nullptr);
+  bool CoalesceOrRedistribute(N*& node, Transaction *transaction = nullptr);
 
-  template<typename N>
-  bool Coalesce(N **neighbor_node, N **node, BPlusTreeInternalPage<KeyType, page_id_t, KeyComparator> **parent,
+  bool Coalesce(InternalPage *&neighbor_node, InternalPage *&node, InternalPage *&parent,
                 int index, Transaction *transaction = nullptr);
 
-  template<typename N>
-  void Redistribute(N *neighbor_node, N *node, int index);
+  bool Coalesce(LeafPage *&neighbor_node, LeafPage *&node, InternalPage *&parent,
+                int index, Transaction *transaction = nullptr);
+
+/*  template<typename N>
+  void Redistribute(N *neighbor_node, N *node, int index);*/
+  void Redistribute(LeafPage *neighbor_node, LeafPage *node, int index);
+
+  void Redistribute(InternalPage *neighbor_node, InternalPage *node, int index);
 
   bool AdjustRoot(BPlusTreePage *node);
 
@@ -102,7 +110,7 @@ private:
 
   // member variable
   index_id_t index_id_;
-  page_id_t root_page_id_;
+  page_id_t root_page_id_{INVALID_PAGE_ID};
   BufferPoolManager *buffer_pool_manager_;
   KeyComparator comparator_;
   int leaf_max_size_;
