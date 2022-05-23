@@ -57,7 +57,7 @@ public:
   bool Check();
 
   // destroy the b plus tree
-  void Destroy(page_id_t current_page_id);
+  void Destroy(page_id_t current_page_id = INVALID_PAGE_ID);
 
   void PrintTree(std::ofstream &out) {
     if (IsEmpty()) {

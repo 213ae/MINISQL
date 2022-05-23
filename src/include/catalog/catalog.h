@@ -10,6 +10,7 @@
 #include "catalog/table.h"
 #include "common/config.h"
 #include "common/dberr.h"
+#include "common/macros.h"
 #include "transaction/lock_manager.h"
 #include "transaction/log_manager.h"
 #include "transaction/transaction.h"

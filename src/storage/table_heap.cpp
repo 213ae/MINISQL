@@ -85,9 +85,15 @@ void TableHeap::RollbackDelete(const RowId &rid, Transaction *txn) {
   buffer_pool_manager_->UnpinPage(page->GetTablePageId(), true);
 }
 
-void TableHeap::FreeHeap() {
-  //貌似不能做些啥
-  //把buffer中的数据页flush到磁盘
+void TableHeap::FreeHeap(page_id_t page_id) {
+  if (page_id != INVALID_PAGE_ID) {
+  auto temp_table_page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(page_id));  // 删除table_heap
+  if(temp_table_page->GetNextPageId() != INVALID_PAGE_ID) FreeHeap(temp_table_page->GetNextPageId());
+  buffer_pool_manager_->UnpinPage(page_id, false);
+  buffer_pool_manager_->DeletePage(page_id);
+  }else{
+    FreeHeap(first_page_id_);
+  }
 }
 
 bool TableHeap::GetTuple(Row *row, Transaction *txn) {

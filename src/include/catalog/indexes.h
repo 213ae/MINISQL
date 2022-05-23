@@ -6,6 +6,8 @@
 #include "catalog/table.h"
 #include "index/generic_key.h"
 #include "index/b_plus_tree_index.h"
+#include "common/rowid.h"
+#include "common/macros.h"
 #include "record/schema.h"
 
 class IndexMetadata {
@@ -36,7 +38,7 @@ private:
   IndexMetadata() = delete;
 
   explicit IndexMetadata(const index_id_t index_id, const std::string &index_name,
-                         const table_id_t table_id, const std::vector<uint32_t> &key_map) {}
+                         const table_id_t table_id, const std::vector<uint32_t> &key_map) ;
 
 private:
   static constexpr uint32_t INDEX_METADATA_MAGIC_NUM = 344528;
@@ -50,6 +52,7 @@ private:
  * The IndexInfo class maintains metadata about a index.
  */
 class IndexInfo {
+  using Index = BPlusTreeIndex<GenericKey<32>, RowId, GenericComparator<32>>;
 public:
   static IndexInfo *Create(MemHeap *heap) {
     void *buf = heap->Allocate(sizeof(IndexInfo));
@@ -62,9 +65,12 @@ public:
 
   void Init(IndexMetadata *meta_data, TableInfo *table_info, BufferPoolManager *buffer_pool_manager) {
     // Step1: init index metadata and table info
+    meta_data_ = meta_data;
+    table_info_ = table_info;
     // Step2: mapping index key to key schema
+    key_schema_ = Schema::ShallowCopySchema(table_info_->GetSchema(), meta_data_->key_map_, heap_);
     // Step3: call CreateIndex to create the index
-    ASSERT(false, "Not Implemented yet.");
+    index_ = CreateIndex(buffer_pool_manager);
   }
 
   inline Index *GetIndex() { return index_; }
@@ -82,8 +88,7 @@ private:
                          key_schema_{nullptr}, heap_(new SimpleMemHeap()) {}
 
   Index *CreateIndex(BufferPoolManager *buffer_pool_manager) {
-    ASSERT(false, "Not Implemented yet.");
-    return nullptr;
+    return ALLOC_P(heap_, Index)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
   }
 
 private:

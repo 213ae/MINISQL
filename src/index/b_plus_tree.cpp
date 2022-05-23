@@ -13,11 +13,13 @@ BPLUSTREE_TYPE::BPlusTree(index_id_t index_id, BufferPoolManager *buffer_pool_ma
           comparator_(comparator),
           leaf_max_size_(leaf_max_size),
           internal_max_size_(internal_max_size) {
-
+  auto root_page = reinterpret_cast<IndexRootsPage*>(buffer_pool_manager_->FetchPage(INDEX_ROOTS_PAGE_ID));
+  root_page->GetRootId(index_id_, &root_page_id_);
 }
 
 INDEX_TEMPLATE_ARGUMENTS
 void BPLUSTREE_TYPE::Destroy(page_id_t current_page_id) {
+  if(current_page_id == INVALID_PAGE_ID) Destroy(root_page_id_);
   auto current_page = reinterpret_cast<InternalPage *>(buffer_pool_manager_->FetchPage(current_page_id));
   if (!current_page->IsLeafPage()) {
     for (int i = 0; i < current_page->GetSize(); ++i) {
@@ -210,8 +212,11 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *transaction) {
         page_id_t child_page_id = parent_page->GetPageId();
         page_id_t parent_page_id = parent_page->GetParentPageId();
         buffer_pool_manager_->UnpinPage(child_page_id, false);
-        parent_page = reinterpret_cast<InternalPage *>(buffer_pool_manager_->FetchPage(parent_page_id));
-        if(parent_page == nullptr) break;
+        if(parent_page_id != INVALID_PAGE_ID){
+          parent_page = reinterpret_cast<InternalPage *>(buffer_pool_manager_->FetchPage(parent_page_id));
+        }else{
+          break;
+        }
         child_index = parent_page->ValueIndex(child_page_id);
       }
       if(parent_page != nullptr) {

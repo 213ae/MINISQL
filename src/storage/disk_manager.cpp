@@ -106,12 +106,11 @@ void DiskManager::DeAllocatePage(page_id_t logical_page_id) {
   // 根据分区号读取对应的位图页
   ReadPhysicalPage(static_cast<page_id_t>(no_bitmap * (BITMAP_SIZE + 1) + 1), bitmap_buf);
   auto *bitmap = reinterpret_cast<BitmapPage<PAGE_SIZE> *>(bitmap_buf);
-  {  // 成功删除则更新位图，更新元数据
-    if (bitmap->DeAllocatePage(page_offset)) {
-      WritePhysicalPage(static_cast<page_id_t>(no_bitmap * (BITMAP_SIZE + 1) + 1), bitmap_buf);
-      meta_page->num_allocated_pages_--;
-      meta_page->extent_used_page_[no_bitmap]--;
-    }
+  // 成功删除则更新位图，更新元数据
+  if (bitmap->DeAllocatePage(page_offset)) {
+    WritePhysicalPage(static_cast<page_id_t>(no_bitmap * (BITMAP_SIZE + 1) + 1), bitmap_buf);
+    meta_page->num_allocated_pages_--;
+    meta_page->extent_used_page_[no_bitmap]--;
   }
 }
 
