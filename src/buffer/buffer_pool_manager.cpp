@@ -157,6 +157,7 @@ bool BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty) {
 bool BufferPoolManager::FlushPage(page_id_t page_id) {
   if(page_table_.find(page_id) != page_table_.end()) {
     disk_manager_->WritePage(page_id, pages_[page_table_[page_id]].data_);
+    pages_[page_table_[page_id]].is_dirty_ = false;
     return true;
   }else{
     return false;

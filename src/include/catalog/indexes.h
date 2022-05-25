@@ -48,11 +48,13 @@ private:
   std::vector<uint32_t> key_map_;  /** The mapping of index key to tuple key */
 };
 
+template <size_t N>
+using BPIndex = BPlusTreeIndex<GenericKey<N>, RowId, GenericComparator<N>>;
+
 /**
  * The IndexInfo class maintains metadata about a index.
  */
 class IndexInfo {
-  using Index = BPlusTreeIndex<GenericKey<32>, RowId, GenericComparator<32>>;
 public:
   static IndexInfo *Create(MemHeap *heap) {
     void *buf = heap->Allocate(sizeof(IndexInfo));
@@ -88,7 +90,19 @@ private:
                          key_schema_{nullptr}, heap_(new SimpleMemHeap()) {}
 
   Index *CreateIndex(BufferPoolManager *buffer_pool_manager) {
-    return ALLOC_P(heap_, Index)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
+    uint32_t max_size = 8;
+    for(auto col : key_schema_->GetColumns()){
+      max_size += col->GetLength();
+    }
+    if(max_size <= 8) return ALLOC_P(heap_, BPIndex<16>)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
+    else if(max_size <= 24) return ALLOC_P(heap_, BPIndex<32>)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
+    else if(max_size <= 56) return ALLOC_P(heap_, BPIndex<64>)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
+    else if(max_size <= 120) return ALLOC_P(heap_, BPIndex<128>)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
+    else if(max_size <= 248) return ALLOC_P(heap_, BPIndex<256>)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
+    else {
+      LOG(ERROR) << "Key size is too large";
+      return nullptr;
+    }
   }
 
 private:

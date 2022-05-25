@@ -78,8 +78,6 @@ private:
   void InsertIntoParent(BPlusTreePage *old_node, const KeyType &key, BPlusTreePage *new_node,
                         Transaction *transaction = nullptr);
 
- /* template<typename N>
-  N *Split(N *node, Transaction *transaction);*/
   LeafPage *Split(LeafPage *node, Transaction *transaction);
 
   InternalPage *Split(InternalPage *node, Transaction *transaction);
@@ -93,8 +91,6 @@ private:
   bool Coalesce(LeafPage *&neighbor_node, LeafPage *&node, InternalPage *&parent,
                 int index, Transaction *transaction = nullptr);
 
-/*  template<typename N>
-  void Redistribute(N *neighbor_node, N *node, int index);*/
   void Redistribute(LeafPage *neighbor_node, LeafPage *node, int index);
 
   void Redistribute(InternalPage *neighbor_node, InternalPage *node, int index);

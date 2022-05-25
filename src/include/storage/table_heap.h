@@ -24,7 +24,7 @@ public:
   }
 
   ~TableHeap() {
-    FreeHeap();
+    //do something
   }
 
 
@@ -95,7 +95,7 @@ public:
   /**
    * Free table heap and release storage in disk file
    */
-  void FreeHeap(page_id_t page_id = INVALID_PAGE_ID);
+  void DeleteTable(page_id_t page_id = INVALID_PAGE_ID);
 
   /**
    * @return the begin iterator of this table

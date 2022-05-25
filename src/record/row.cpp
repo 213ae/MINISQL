@@ -1,5 +1,4 @@
 #include "record/row.h"
-
 uint32_t Row::SerializeTo(char *buf, Schema *schema) const {
   if(GetFieldCount() == 0) return 0;
   uint32_t offset = 0;

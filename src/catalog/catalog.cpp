@@ -178,7 +178,7 @@ dberr_t CatalogManager::GetTableIndexes(const std::string &table_name, std::vect
 dberr_t CatalogManager::DropTable(const string &table_name) {
   if(table_names_.find(table_name) == table_names_.end()) return DB_TABLE_NOT_EXIST;
   table_id_t table_id = table_names_[table_name];
-  tables_[table_id]->GetTableHeap()->FreeHeap();
+  tables_[table_id]->GetTableHeap()->DeleteTable();
   buffer_pool_manager_->DeletePage(catalog_meta_->table_meta_pages_[table_id]);
   catalog_meta_->table_meta_pages_.erase(table_id);
   auto catalog_meta_page = buffer_pool_manager_->FetchPage(CATALOG_META_PAGE_ID);

@@ -254,11 +254,7 @@ INDEX_TEMPLATE_ARGUMENTS
 template<typename N>
 bool BPLUSTREE_TYPE::CoalesceOrRedistribute(N*& node, Transaction *transaction) {
   if(node->IsRootPage()){
-    if (node->GetSize() < 2) {
-      if (AdjustRoot(node)) {
-        return true;
-      }
-    }
+    if (node->GetSize() < 2) { if (AdjustRoot(node)) return true; }
     return false;
   }
   auto parent_page = reinterpret_cast<InternalPage *>(buffer_pool_manager_->FetchPage(node->GetParentPageId()));
@@ -461,7 +457,7 @@ bool BPLUSTREE_TYPE::AdjustRoot(BPlusTreePage *old_root_node) {
     buffer_pool_manager_->UnpinPage(INDEX_ROOTS_PAGE_ID, true);
     return true;
   }else if(old_root_node->GetSize() == 1){
-    root_page_id_ = reinterpret_cast<InternalPage *>(old_root_node)->ValueAt(0);
+    root_page_id_ = reinterpret_cast<InternalPage *>(old_root_node)->RemoveAndReturnOnlyChild();
     UpdateRootPageId();
     return true;
   }else{

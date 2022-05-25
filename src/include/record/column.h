@@ -42,7 +42,7 @@ private:
   static constexpr uint32_t COLUMN_MAGIC_NUM = 210928;
   std::string name_;
   TypeId type_;
-  uint32_t len_{0};       // for char type this is the maximum byte length of the string data,
+  uint32_t len_{4};       // for char type this is the maximum byte length of the string data,
   // otherwise is the fixed size
   uint32_t table_ind_{0}; // column position in table
   bool nullable_{false};  // whether the column can be null
