@@ -1,5 +1,5 @@
-#include "common/macros.h"
 #include "record/types.h"
+#include "common/macros.h"
 #include "record/field.h"
 
 inline int CompareStrings(const char *str1, int len1, const char *str2, int len2) {
@@ -16,12 +16,7 @@ inline int CompareStrings(const char *str1, int len1, const char *str2, int len2
 
 // ==============================Type=============================
 
-Type *Type::type_singletons_[] = {
-        new Type(TypeId::kTypeInvalid),
-        new TypeInt(),
-        new TypeFloat(),
-        new TypeChar()
-};
+Type *Type::type_singletons_[] = {new Type(TypeId::kTypeInvalid), new TypeInt(), new TypeFloat(), new TypeChar()};
 
 uint32_t Type::SerializeTo(const Field &field, char *buf) const {
   ASSERT(false, "SerializeTo not implemented.");
@@ -180,13 +175,12 @@ uint32_t TypeFloat::GetSerializedSize(const Field &field, bool is_null) const {
   return GetTypeSize(type_id_);
 }
 
-
 CmpBool TypeFloat::CompareEquals(const Field &left, const Field &right) const {
   ASSERT(left.CheckComparable(right), "Not comparable.");
   if (left.IsNull() || right.IsNull()) {
     return CmpBool::kNull;
   }
-  return GetCmpBool(left.value_.float_ == right.value_.float_);
+  return GetCmpBool(fabs(left.value_.float_ - right.value_.float_) <= EPS);
 }
 
 CmpBool TypeFloat::CompareNotEquals(const Field &left, const Field &right) const {
@@ -194,7 +188,7 @@ CmpBool TypeFloat::CompareNotEquals(const Field &left, const Field &right) const
   if (left.IsNull() || right.IsNull()) {
     return CmpBool::kNull;
   }
-  return GetCmpBool(left.value_.float_ != right.value_.float_);
+  return GetCmpBool(fabs(left.value_.float_ - right.value_.float_) > EPS);
 }
 
 CmpBool TypeFloat::CompareLessThan(const Field &left, const Field &right) const {
@@ -258,13 +252,9 @@ uint32_t TypeChar::GetSerializedSize(const Field &field, bool is_null) const {
   return len + sizeof(uint32_t);
 }
 
-const char *TypeChar::GetData(const Field &val) const {
-  return val.value_.chars_;
-}
+const char *TypeChar::GetData(const Field &val) const { return val.value_.chars_; }
 
-uint32_t TypeChar::GetLength(const Field &val) const {
-  return val.len_;
-}
+uint32_t TypeChar::GetLength(const Field &val) const { return val.len_; }
 
 CmpBool TypeChar::CompareEquals(const Field &left, const Field &right) const {
   ASSERT(left.CheckComparable(right), "Not comparable.");
