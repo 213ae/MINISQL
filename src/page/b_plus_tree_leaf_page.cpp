@@ -40,7 +40,6 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::SetNextPageId(page_id_t next_page_id) {
  * Helper method to find the first index i so that array_[i].first >= key
  * NOTE: This method is only used when generating index iterator
  * 二分查找
- * todo 待测试
  */
 INDEX_TEMPLATE_ARGUMENTS
 int B_PLUS_TREE_LEAF_PAGE_TYPE::KeyIndex(const KeyType &key, const KeyComparator &comparator) const {
@@ -287,3 +286,9 @@ class BPlusTreeLeafPage<GenericKey<32>, RowId, GenericComparator<32>>;
 
 template
 class BPlusTreeLeafPage<GenericKey<64>, RowId, GenericComparator<64>>;
+
+template
+class BPlusTreeLeafPage<GenericKey<128>, RowId, GenericComparator<128>>;
+
+template
+class BPlusTreeLeafPage<GenericKey<256>, RowId, GenericComparator<256>>;

@@ -1,5 +1,6 @@
 #include <unordered_set>
 #include "gtest/gtest.h"
+#include "glog/logging.h"
 #include "storage/disk_manager.h"
 
 TEST(DiskManagerTest, BitMapPageTest) {
@@ -33,9 +34,10 @@ TEST(DiskManagerTest, BitMapPageTest) {
 }
 
 TEST(DiskManagerTest, FreePageAllocationTest) {
+  //sleep(5);
   std::string db_name = "disk_test.db";
   DiskManager *disk_mgr = new DiskManager(db_name);
-  int extent_nums = 2;
+  int extent_nums = 5;
   for (uint32_t i = 0; i < DiskManager::BITMAP_SIZE * extent_nums; i++) {
     page_id_t page_id = disk_mgr->AllocatePage();
     DiskFileMetaPage *meta_page = reinterpret_cast<DiskFileMetaPage *>(disk_mgr->GetMetaData());
@@ -43,6 +45,7 @@ TEST(DiskManagerTest, FreePageAllocationTest) {
     EXPECT_EQ(i / DiskManager::BITMAP_SIZE + 1, meta_page->GetExtentNums());
     EXPECT_EQ(i + 1, meta_page->GetAllocatedPages());
     EXPECT_EQ(i % DiskManager::BITMAP_SIZE + 1, meta_page->GetExtentUsedPage(i / DiskManager::BITMAP_SIZE));
+    LOG_EVERY_N(INFO, 5000) << i;
   }
   disk_mgr->DeAllocatePage(0);
   disk_mgr->DeAllocatePage(DiskManager::BITMAP_SIZE - 1);

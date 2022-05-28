@@ -74,6 +74,7 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
 }
 
 Page *BufferPoolManager::NewPage(page_id_t &page_id) {
+  //LOG(INFO) << "new page";
   frame_id_t frame_id_will_used;
   // 2.   Pick a victim page P from either the free list or the replacer. Always pick from the free list first.
   if(!free_list_.empty()){

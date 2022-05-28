@@ -32,6 +32,13 @@ public:
     if (!closed) {
       Close();
     }
+    for(auto bitmap_ptr : bitmaps_){
+      if(bitmap_ptr.second == nullptr) {
+        std::cout << "Bitmap_ptr is nullptr.";
+      }else {
+        delete bitmap_ptr.second;
+      }
+    }
   }
 
   /**
@@ -109,6 +116,7 @@ private:
   std::string file_name_;
   // with multiple buffer pool instances, need to protect file access
   std::recursive_mutex db_io_latch_;
+  unordered_map<int, BitmapPage<PAGE_SIZE>*> bitmaps_;//todo bitmap的读和写可以放到DiskManager的构造和析构函数中统一进行
   bool closed{false};
   //保存了分配的总页数，分区数，每个分区使用的页数
   char meta_data_[PAGE_SIZE];

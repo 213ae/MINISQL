@@ -25,7 +25,7 @@ public:
     catalog_mgr_ = new CatalogManager(bpm_, nullptr, nullptr, init);
     // Allocate static page for db storage engine
     if (init) {
-      page_id_t id;
+      [[maybe_unused]] page_id_t id;
       ASSERT(bpm_->IsPageFree(CATALOG_META_PAGE_ID), "Catalog meta page not free.");
       ASSERT(bpm_->IsPageFree(INDEX_ROOTS_PAGE_ID), "Header page not free.");
       ASSERT(bpm_->NewPage(id) != nullptr && id == CATALOG_META_PAGE_ID, "Failed to allocate catalog meta page.");

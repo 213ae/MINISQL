@@ -439,6 +439,8 @@ test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.o: ../src/include
 test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.o: ../src/include/page/bitmap_page.h
 test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.o: ../src/include/page/disk_file_meta_page.h
 test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.o: ../src/include/storage/disk_manager.h
+test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.o: ../thirdparty/glog/src/glog/log_severity.h
+test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.o: ../thirdparty/glog/src/glog/platform.h
 test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.o: ../thirdparty/googletest/include/gtest/gtest-death-test.h
 test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.o: ../thirdparty/googletest/include/gtest/gtest-matchers.h
 test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.o: ../thirdparty/googletest/include/gtest/gtest-message.h
@@ -460,6 +462,9 @@ test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.o: ../thirdparty/
 test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.o: ../thirdparty/googletest/include/gtest/internal/gtest-string.h
 test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.o: ../thirdparty/googletest/include/gtest/internal/gtest-type-util.h
 test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.o: ../test/storage/disk_manager_test.cpp
+test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.o: glog-build/glog/export.h
+test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.o: glog-build/glog/logging.h
+test/CMakeFiles/minisql_test.dir/storage/disk_manager_test.cpp.o: glog-build/glog/vlog_is_on.h
 
 test/CMakeFiles/minisql_test.dir/storage/table_heap_test.cpp.o: ../src/include/buffer/buffer_pool_manager.h
 test/CMakeFiles/minisql_test.dir/storage/table_heap_test.cpp.o: ../src/include/buffer/lru_replacer.h

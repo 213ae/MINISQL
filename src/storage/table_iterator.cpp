@@ -50,16 +50,18 @@ TableIterator &TableIterator::operator++() {
     rid = next_rid;
     row->SetRowId(rid);
     table_heap->GetTuple(row, txn);
+    table_heap->buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
   }else if(page->GetNextPageId() != INVALID_PAGE_ID){
     table_heap->buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
     page = reinterpret_cast<TablePage *>(table_heap->buffer_pool_manager_->FetchPage(page->GetNextPageId()));
     page->GetFirstTupleRid(&rid);
     row->SetRowId(rid);
     table_heap->GetTuple(row, txn);
+    table_heap->buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
   }else{
+    table_heap->buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
     new (this)TableIterator();
   }
-  table_heap->buffer_pool_manager_->UnpinPage(page->GetPageId(), false);
   return *this;
 }
 

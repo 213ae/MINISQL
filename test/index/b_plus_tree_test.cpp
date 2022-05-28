@@ -11,10 +11,10 @@ TEST(BPlusTreeTests, SampleTest) {
   // Init engine
   DBStorageEngine engine(db_name);
   BasicComparator<int> comparator;
-  BPlusTree<int, int, BasicComparator<int>> tree(0, engine.bpm_, comparator, 4, 4);
+  BPlusTree<int, int, BasicComparator<int>> tree(0, engine.bpm_, comparator, 10, 10);
   TreeFileManagers mgr("tree_");
   // Prepare data
-  const int n = 300;
+  const int n = 1000;
   vector<int> keys;
   vector<int> values;
   vector<int> delete_seq;

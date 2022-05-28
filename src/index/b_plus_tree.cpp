@@ -15,11 +15,17 @@ BPLUSTREE_TYPE::BPlusTree(index_id_t index_id, BufferPoolManager *buffer_pool_ma
           internal_max_size_(internal_max_size) {
   auto root_page = reinterpret_cast<IndexRootsPage*>(buffer_pool_manager_->FetchPage(INDEX_ROOTS_PAGE_ID));
   root_page->GetRootId(index_id_, &root_page_id_);
+  buffer_pool_manager_->UnpinPage(INDEX_ROOTS_PAGE_ID, false);
 }
 
 INDEX_TEMPLATE_ARGUMENTS
 void BPLUSTREE_TYPE::Destroy(page_id_t current_page_id) {
-  if(current_page_id == INVALID_PAGE_ID) Destroy(root_page_id_);
+  if(current_page_id == INVALID_PAGE_ID) {
+    auto root_page = reinterpret_cast<IndexRootsPage*>(buffer_pool_manager_->FetchPage(INDEX_ROOTS_PAGE_ID));
+    root_page->Delete(index_id_);
+    buffer_pool_manager_->UnpinPage(INDEX_ROOTS_PAGE_ID, true);
+    Destroy(root_page_id_);
+  }
   auto current_page = reinterpret_cast<InternalPage *>(buffer_pool_manager_->FetchPage(current_page_id));
   if (!current_page->IsLeafPage()) {
     for (int i = 0; i < current_page->GetSize(); ++i) {
@@ -219,7 +225,7 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *transaction) {
         }
         child_index = parent_page->ValueIndex(child_page_id);
       }
-      if(parent_page != nullptr) {
+      if(parent_page != nullptr && child_index != 0) {
         parent_page->SetKeyAt(child_index, new_first_key);
         buffer_pool_manager_->UnpinPage(parent_page->GetPageId(), true);
       }
@@ -698,3 +704,9 @@ class BPlusTree<GenericKey<32>, RowId, GenericComparator<32>>;
 
 template
 class BPlusTree<GenericKey<64>, RowId, GenericComparator<64>>;
+
+template
+class BPlusTree<GenericKey<128>, RowId, GenericComparator<128>>;
+
+template
+class BPlusTree<GenericKey<256>, RowId, GenericComparator<256>>;

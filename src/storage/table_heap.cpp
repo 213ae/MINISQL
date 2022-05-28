@@ -100,6 +100,7 @@ bool TableHeap::GetTuple(Row *row, Transaction *txn) {
   page_id_t page_id = row->GetRowId().GetPageId();
   if(buffer_pool_manager_->IsPageFree(page_id)) return false;
   auto page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(page_id));
+  if(page == nullptr) return false;
   return page->GetTuple(row, schema_, txn, lock_manager_);
 }
 

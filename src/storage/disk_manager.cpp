@@ -34,29 +34,26 @@ void DiskManager::Close() {
 
 void DiskManager::ReadPage(page_id_t logical_page_id, char *page_data) {
   ASSERT(logical_page_id >= 0, "Invalid page id.");
-  if(!IsPageFree(logical_page_id)) ReadPhysicalPage(MapPageId(logical_page_id), page_data);
-  else LOG(WARNING) << "Invalid page id.";
+  ReadPhysicalPage(MapPageId(logical_page_id), page_data);
 }
 
 void DiskManager::WritePage(page_id_t logical_page_id, const char *page_data) {
   ASSERT(logical_page_id >= 0, "Invalid page id.");
-  if (!IsPageFree(logical_page_id)) WritePhysicalPage(MapPageId(logical_page_id), page_data);
-  else LOG(WARNING) << "Invalid page id.";
-
+  WritePhysicalPage(MapPageId(logical_page_id), page_data);
 }
 
 page_id_t DiskManager::AllocatePage() {
   auto *meta_page = reinterpret_cast<DiskFileMetaPage *>(meta_data_);//获取磁盘元数据
   uint32_t page_id = -1;
-  char bitmap_buf[PAGE_SIZE];
   if(meta_page->num_allocated_pages_ >= MAX_VALID_PAGE) LOG(FATAL) << "Maximum available pages reached";//检查分配页数是否达到上限
   if(meta_page->num_extents_ == 0){//第一次使用，需初始化磁盘管理器元数据，开辟新的分区
+    char* bitmap_buf = new char[PAGE_SIZE];
     //初始化位图
     memset(bitmap_buf, 0, PAGE_SIZE);
-    auto *bitmap = reinterpret_cast<BitmapPage<PAGE_SIZE> *>(bitmap_buf);
+    bitmaps_[0] = reinterpret_cast<BitmapPage<PAGE_SIZE> *>(bitmap_buf);
     //获取页号，更新位图
-    bitmap->AllocatePage(page_id);
-    WritePhysicalPage(static_cast<page_id_t>(meta_page->num_extents_ * (BITMAP_SIZE + 1) + 1), bitmap_buf);
+    bitmaps_[0]->AllocatePage(page_id);
+    WritePhysicalPage(static_cast<page_id_t>(meta_page->num_extents_ * (BITMAP_SIZE + 1) + 1), reinterpret_cast<char *>(bitmaps_[0]));
     //更新元数据
     meta_page->num_extents_++;
     meta_page->num_allocated_pages_++;
@@ -66,11 +63,14 @@ page_id_t DiskManager::AllocatePage() {
     for (; i < meta_page->num_extents_; ++i) {//遍历分区
       if(meta_page->extent_used_page_[i] < BITMAP_SIZE){//该分区未满
         //获取位图
-        ReadPhysicalPage(static_cast<page_id_t>(i * (BITMAP_SIZE + 1) + 1), bitmap_buf);
-        auto *bitmap = reinterpret_cast<BitmapPage<PAGE_SIZE> *>(bitmap_buf);
+        if(bitmaps_.find(i) == bitmaps_.end()) {
+          char* bitmap_buf = new char[PAGE_SIZE];
+          ReadPhysicalPage(static_cast<page_id_t>(i * (BITMAP_SIZE + 1) + 1), bitmap_buf);
+          bitmaps_[i] = reinterpret_cast<BitmapPage<PAGE_SIZE> *>(bitmap_buf);
+        }
         //获取页号，更新位图
-        bitmap->AllocatePage(page_id);
-        WritePhysicalPage(static_cast<page_id_t>(i * (BITMAP_SIZE + 1) + 1), bitmap_buf);
+        bitmaps_[i]->AllocatePage(page_id);
+        WritePhysicalPage(static_cast<page_id_t>(i * (BITMAP_SIZE + 1) + 1), reinterpret_cast<char *>(bitmaps_[i]));
         //逻辑页号 = 分配页在分区i中的页号 + 分区i之前所有分区页数总和
         page_id += i * BITMAP_SIZE;
         //更新元数据
@@ -81,11 +81,12 @@ page_id_t DiskManager::AllocatePage() {
     }
     if(i == meta_page->num_extents_){//所有分区都已满，则开辟新的分区
       //初始化位图
+      char* bitmap_buf = new char[PAGE_SIZE];
       memset(bitmap_buf, 0, PAGE_SIZE);
-      auto *bitmap = reinterpret_cast<BitmapPage<PAGE_SIZE> *>(bitmap_buf);
+      bitmaps_[i] = reinterpret_cast<BitmapPage<PAGE_SIZE> *>(bitmap_buf);
       //获取页号，更新位图
-      bitmap->AllocatePage(page_id);
-      WritePhysicalPage(static_cast<page_id_t>(meta_page->num_extents_ * (BITMAP_SIZE + 1) + 1), bitmap_buf);
+      bitmaps_[i]->AllocatePage(page_id);
+      WritePhysicalPage(static_cast<page_id_t>(meta_page->num_extents_ * (BITMAP_SIZE + 1) + 1), reinterpret_cast<char *>(bitmaps_[i]));
       //逻辑页号 = 分配页在分区i中的页号 + 分区i之前所有分区页数总和
       page_id += meta_page->num_extents_ * BITMAP_SIZE;
       //更新元数据
@@ -99,29 +100,32 @@ page_id_t DiskManager::AllocatePage() {
 
 void DiskManager::DeAllocatePage(page_id_t logical_page_id) {
   auto *meta_page = reinterpret_cast<DiskFileMetaPage *>(meta_data_);
-  // 初始化位图
-  char bitmap_buf[PAGE_SIZE];
   page_id_t no_bitmap = logical_page_id / (page_id_t)BITMAP_SIZE;  // 分区号
   uint32_t page_offset = logical_page_id % BITMAP_SIZE;            // 页号
   // 根据分区号读取对应的位图页
-  ReadPhysicalPage(static_cast<page_id_t>(no_bitmap * (BITMAP_SIZE + 1) + 1), bitmap_buf);
-  auto *bitmap = reinterpret_cast<BitmapPage<PAGE_SIZE> *>(bitmap_buf);
+  if(bitmaps_.find(no_bitmap) == bitmaps_.end()) {
+    char* bitmap_buf = new char[PAGE_SIZE];
+    ReadPhysicalPage(static_cast<page_id_t>(no_bitmap * (BITMAP_SIZE + 1) + 1), bitmap_buf);
+    bitmaps_[no_bitmap] = reinterpret_cast<BitmapPage<PAGE_SIZE> *>(bitmap_buf);
+  }
   // 成功删除则更新位图，更新元数据
-  if (bitmap->DeAllocatePage(page_offset)) {
-    WritePhysicalPage(static_cast<page_id_t>(no_bitmap * (BITMAP_SIZE + 1) + 1), bitmap_buf);
+  if (bitmaps_[no_bitmap]->DeAllocatePage(page_offset)) {
+    WritePhysicalPage(static_cast<page_id_t>(no_bitmap * (BITMAP_SIZE + 1) + 1), reinterpret_cast<char *>(bitmaps_[no_bitmap]));
     meta_page->num_allocated_pages_--;
     meta_page->extent_used_page_[no_bitmap]--;
   }
 }
 
 bool DiskManager::IsPageFree(page_id_t logical_page_id) {
-  char bitmap_buf[PAGE_SIZE];
   page_id_t no_bitmap = logical_page_id / (page_id_t)BITMAP_SIZE;//分区号
   uint32_t page_offset = logical_page_id % BITMAP_SIZE;//页号
   //根据分区号读取对应的位图页
-  ReadPhysicalPage(static_cast<page_id_t>(no_bitmap * (BITMAP_SIZE + 1) + 1), bitmap_buf);
-  auto *bitmap = reinterpret_cast<BitmapPage<PAGE_SIZE> *>(bitmap_buf);
-  return bitmap->IsPageFree(page_offset);
+  if(bitmaps_.find(no_bitmap) == bitmaps_.end()) {
+    char* bitmap_buf = new char[PAGE_SIZE];
+    ReadPhysicalPage(static_cast<page_id_t>(no_bitmap * (BITMAP_SIZE + 1) + 1), bitmap_buf);
+    bitmaps_[no_bitmap] = reinterpret_cast<BitmapPage<PAGE_SIZE> *>(bitmap_buf);
+  }
+  return bitmaps_[no_bitmap]->IsPageFree(page_offset);
 }
 
 page_id_t DiskManager::MapPageId(page_id_t logical_page_id) {
