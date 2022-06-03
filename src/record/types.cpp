@@ -155,6 +155,7 @@ CmpBool TypeInt::CompareGreaterThanEquals(const Field &left, const Field &right)
 
 // ==============================TypeFloat=============================
 
+
 uint32_t TypeFloat::SerializeTo(const Field &field, char *buf) const {
   if (!field.IsNull()) {
     MACH_WRITE_TO(float_t, buf, field.value_.float_);

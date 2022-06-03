@@ -10,7 +10,6 @@ FILE *yyin;
 #include "parser/minisql_lex.h"
 #include "parser/parser.h"
 }
-
 void InitGoogleLog(char *argv) {
   FLAGS_logtostderr = true;
   FLAGS_colorlogtostderr = true;
@@ -40,7 +39,8 @@ int main(int argc, char **argv) {
   TreeFileManagers syntax_tree_file_mgr("syntax_tree_");
   [[maybe_unused]] uint32_t syntax_tree_id = 0;
 
-  while (1) {
+  int i = 1;
+  while (i++) {
     // read from buffer
     InputCommand(cmd, buf_size);
     // create buffer for sql input
@@ -70,8 +70,12 @@ int main(int argc, char **argv) {
     }
 
     ExecuteContext context;
+    SyntaxTreePrinter printer(MinisqlGetParserRootNode());
+
+    if(i < 20) printer.PrintTree(syntax_tree_file_mgr[i]);
     engine.Execute(MinisqlGetParserRootNode(), &context);
-    sleep(1);
+
+    //sleep(1);
 
     // clean memory after parse
     MinisqlParserFinish();

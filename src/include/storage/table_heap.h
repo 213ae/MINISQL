@@ -6,11 +6,12 @@
 #include "storage/table_iterator.h"
 #include "transaction/log_manager.h"
 #include "transaction/lock_manager.h"
+#include <unordered_map>
 
 class TableHeap {
   friend class TableIterator;
 
-public:
+ public:
   static TableHeap *Create(BufferPoolManager *buffer_pool_manager, Schema *schema, Transaction *txn,
                            LogManager *log_manager, LockManager *lock_manager, MemHeap *heap) {
     void *buf = heap->Allocate(sizeof(TableHeap));
@@ -24,7 +25,13 @@ public:
   }
 
   ~TableHeap() {
-    //do something
+    for(auto & i : row_will_delete_map){
+      auto page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(i.first));
+      sort(i.second.begin(),i.second.end());
+      i.second.emplace_back(page->GetTupleCount());
+      page->ApplyDelete(i.second, nullptr, log_manager_);
+      buffer_pool_manager_->UnpinPage(i.first, true);
+    }
   }
 
 
@@ -112,19 +119,21 @@ public:
    */
   inline page_id_t GetFirstPageId() const { return first_page_id_; }
 
-private:
+ private:
   /**
    * create table heap and initialize first page
    */
   explicit TableHeap(BufferPoolManager *buffer_pool_manager, Schema *schema, Transaction *txn,
                      LogManager *log_manager, LockManager *lock_manager)
-        : buffer_pool_manager_(buffer_pool_manager),
-          schema_(schema),
-          log_manager_(log_manager),
-          lock_manager_(lock_manager) {
+      : buffer_pool_manager_(buffer_pool_manager),
+        schema_(schema),
+        log_manager_(log_manager),
+        lock_manager_(lock_manager) {
     auto *table_page = reinterpret_cast<TablePage *>(buffer_pool_manager->NewPage(first_page_id_));
     table_page->Init(first_page_id_, INVALID_PAGE_ID, log_manager, txn);
+    free_space_map.emplace_back(pair(table_page->GetFreeSpaceRemaining(), table_page->GetTablePageId()));
     buffer_pool_manager->UnpinPage(first_page_id_, true);
+    last_page_id = first_page_id_;
     //从bufmgr获取新磁盘页，并对页初始化
   }
 
@@ -133,19 +142,49 @@ private:
    */
   explicit TableHeap(BufferPoolManager *buffer_pool_manager, page_id_t first_page_id, Schema *schema,
                      LogManager *log_manager, LockManager *lock_manager)
-          : buffer_pool_manager_(buffer_pool_manager),
-            first_page_id_(first_page_id),
-            schema_(schema),
-            log_manager_(log_manager),
-            lock_manager_(lock_manager) {
+      : buffer_pool_manager_(buffer_pool_manager),
+        first_page_id_(first_page_id),
+        schema_(schema),
+        log_manager_(log_manager),
+        lock_manager_(lock_manager)
+  {
+    page_id_t page_id = first_page_id_;
+    auto *table_page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(page_id));
+    make_heap(free_space_map.begin(), free_space_map.end());
+    while(page_id != INVALID_PAGE_ID)
+    {
+      free_space_map.emplace_back(pair(table_page->GetFreeSpaceRemaining(),table_page->GetTablePageId()));
+      push_heap(free_space_map.begin(), free_space_map.end());
+      uint32_t i;
+      vector <uint32_t> free_slot;
+      for (i = 0; i < table_page->GetTupleCount(); i++)
+      {
+        if (table_page->GetTupleSize(i) == 0)
+        {
+          free_slot.push_back(i);
+        }
+      }
+      reusable_slot_map.insert(pair(table_page->GetTablePageId(), free_slot));
+      buffer_pool_manager->UnpinPage(page_id, false);
+      page_id = table_page->GetNextPageId();
+      last_page_id = page_id;
+      if(page_id == INVALID_PAGE_ID) break;
+      table_page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(page_id));
+    }
+    if(page_id != INVALID_PAGE_ID) buffer_pool_manager->UnpinPage(page_id, false);
   }
 
-private:
+ private:
   BufferPoolManager *buffer_pool_manager_;
   page_id_t first_page_id_;
+  page_id_t last_page_id;
+  vector<pair<uint32_t,page_id_t>>free_space_map;
+  unordered_map <page_id_t,vector<uint32_t>>reusable_slot_map;
+  unordered_map <page_id_t, vector<uint32_t>> row_will_delete_map;
   Schema *schema_;
   [[maybe_unused]] LogManager *log_manager_;
   [[maybe_unused]] LockManager *lock_manager_;
+  static constexpr size_t PAGE_SIZE_TUPLE = 8;
 };
 
 #endif  // MINISQL_TABLE_HEAP_H

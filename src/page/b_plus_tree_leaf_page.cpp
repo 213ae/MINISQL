@@ -34,6 +34,9 @@ page_id_t B_PLUS_TREE_LEAF_PAGE_TYPE::GetNextPageId() const {
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_LEAF_PAGE_TYPE::SetNextPageId(page_id_t next_page_id) {
   next_page_id_ = next_page_id;
+  if(next_page_id == 0) {
+    LOG(INFO) << "Fatal error";
+  }
 }
 
 /**
@@ -56,7 +59,7 @@ int B_PLUS_TREE_LEAF_PAGE_TYPE::KeyIndex(const KeyType &key, const KeyComparator
       return mid;
     }
   }
-  LOG(FATAL) << "Something wrong in B_PLUS_TREE_LEAF_PAGE_TYPE::KeyIndex";
+  //LOG(FATAL) << "Something wrong in B_PLUS_TREE_LEAF_PAGE_TYPE::KeyIndex";
   return -1;
 }
 
@@ -90,8 +93,10 @@ int B_PLUS_TREE_LEAF_PAGE_TYPE::Insert(const KeyType &key, const ValueType &valu
   int index = 0;
   if(GetSize() == 0 || comparator(array_[0].first, key) > 0) {
     index = 0;
-  } else if(comparator(array_[GetSize() - 1].first, key) < 0) {
-    index = GetSize();
+  }else if (comparator(array_[0].first, key) == 0){
+    return -1;
+  }else if(comparator(array_[GetSize() - 1].first, key) < 0) {
+      index = GetSize();
   }else {
     int start = 1;
     int end = GetSize() - 1;
@@ -105,7 +110,7 @@ int B_PLUS_TREE_LEAF_PAGE_TYPE::Insert(const KeyType &key, const ValueType &valu
         index = mid;
         break;
       } else {
-        return -1;
+        return -1;//相等的情况
       }
     }
   }

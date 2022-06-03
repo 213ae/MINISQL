@@ -65,14 +65,14 @@ public:
     delete heap_;
   }
 
-  void Init(IndexMetadata *meta_data, TableInfo *table_info, BufferPoolManager *buffer_pool_manager) {
+  void Init(IndexMetadata *meta_data, TableInfo *table_info, BufferPoolManager *buffer_pool_manager, const string& index_type) {
     // Step1: init index metadata and table info
     meta_data_ = meta_data;
     table_info_ = table_info;
     // Step2: mapping index key to key schema
     key_schema_ = Schema::ShallowCopySchema(table_info_->GetSchema(), meta_data_->key_map_, heap_);
     // Step3: call CreateIndex to create the index
-    index_ = CreateIndex(buffer_pool_manager);
+    index_ = CreateIndex(buffer_pool_manager, index_type);
   }
 
   inline Index *GetIndex() { return index_; }
@@ -89,20 +89,27 @@ private:
   explicit IndexInfo() : meta_data_{nullptr}, index_{nullptr}, table_info_{nullptr},
                          key_schema_{nullptr}, heap_(new SimpleMemHeap()) {}
 
-  Index *CreateIndex(BufferPoolManager *buffer_pool_manager) {
+  Index *CreateIndex(BufferPoolManager *buffer_pool_manager, const string& index_type) {
     uint32_t max_size = 8;
     for(auto col : key_schema_->GetColumns()){
       max_size += col->GetLength();
     }
-    if(max_size <= 8) return ALLOC_P(heap_, BPIndex<16>)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
-    else if(max_size <= 24) return ALLOC_P(heap_, BPIndex<32>)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
-    else if(max_size <= 56) return ALLOC_P(heap_, BPIndex<64>)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
-    else if(max_size <= 120) return ALLOC_P(heap_, BPIndex<128>)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
-    else if(max_size <= 248) return ALLOC_P(heap_, BPIndex<256>)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
-    else {
-      LOG(ERROR) << "Key size is too large";
-      return nullptr;
-    }
+    if (index_type == "bptree") {
+      if (max_size <= 8)
+        return ALLOC_P(heap_, BPIndex<16>)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
+      else if (max_size <= 24)
+        return ALLOC_P(heap_, BPIndex<32>)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
+      else if (max_size <= 56)
+        return ALLOC_P(heap_, BPIndex<64>)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
+      else if (max_size <= 120)
+        return ALLOC_P(heap_, BPIndex<128>)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
+      else if (max_size <= 248)
+        return ALLOC_P(heap_, BPIndex<256>)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
+      else {
+        LOG(ERROR) << "Key size is too large";
+        return nullptr;
+      }
+    }else{ return nullptr; }
   }
 
 private:

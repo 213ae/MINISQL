@@ -292,6 +292,7 @@ test/CMakeFiles/minisql_test.dir/index/index_iterator_test.cpp.o: ../src/include
 test/CMakeFiles/minisql_test.dir/index/index_iterator_test.cpp.o: ../src/include/transaction/log_manager.h
 test/CMakeFiles/minisql_test.dir/index/index_iterator_test.cpp.o: ../src/include/transaction/transaction.h
 test/CMakeFiles/minisql_test.dir/index/index_iterator_test.cpp.o: ../src/include/utils/mem_heap.h
+test/CMakeFiles/minisql_test.dir/index/index_iterator_test.cpp.o: ../src/include/utils/tree_file_mgr.h
 test/CMakeFiles/minisql_test.dir/index/index_iterator_test.cpp.o: ../thirdparty/glog/src/glog/log_severity.h
 test/CMakeFiles/minisql_test.dir/index/index_iterator_test.cpp.o: ../thirdparty/glog/src/glog/platform.h
 test/CMakeFiles/minisql_test.dir/index/index_iterator_test.cpp.o: ../thirdparty/googletest/include/gtest/gtest-death-test.h

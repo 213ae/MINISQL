@@ -2,6 +2,7 @@
 #include "gtest/gtest.h"
 #include "index/b_plus_tree.h"
 #include "index/basic_comparator.h"
+#include "utils/tree_file_mgr.h"
 
 static const std::string db_name = "bp_tree_insert_test.db";
 
@@ -10,13 +11,17 @@ TEST(BPlusTreeTests, IndexIteratorTest) {
   DBStorageEngine engine(db_name);
   BasicComparator<int> comparator;
   BPlusTree<int, int, BasicComparator<int>> tree(0, engine.bpm_, comparator, 4, 4);
+  TreeFileManagers mgr("tree_");
   // Insert and delete record
   for (int i = 1; i <= 50; i++) {
     tree.Insert(i, i * 100, nullptr);
   }
+  tree.PrintTree(mgr[0]);
   for (int i = 2; i <= 50; i += 2) {
     tree.Remove(i);
+    tree.PrintTree(mgr[i]);
   }
+  tree.PrintTree(mgr[1]);
   // Search keys
   vector<int> v;
   for (int i = 2; i <= 50; i += 2) {

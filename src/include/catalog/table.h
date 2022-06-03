@@ -18,7 +18,7 @@ public:
   static uint32_t DeserializeFrom(char *buf, TableMetadata *&table_meta, MemHeap *heap);
 
   static TableMetadata *Create(table_id_t table_id, std::string table_name,
-                               page_id_t root_page_id, TableSchema *schema, MemHeap *heap);
+                               page_id_t root_page_id, TableSchema *schema, MemHeap *heap, vector<uint32_t> primary_key_map = {0});
 
   inline table_id_t GetTableId() const { return table_id_; }
 
@@ -32,13 +32,14 @@ public:
 private:
   TableMetadata() = delete;
 
-  TableMetadata(table_id_t table_id, std::string table_name, page_id_t root_page_id, TableSchema *schema);
+  TableMetadata(table_id_t table_id, std::string table_name, page_id_t root_page_id, TableSchema *schema, vector<uint32_t> primary_key_map);
 
 private:
   static constexpr uint32_t TABLE_METADATA_MAGIC_NUM = 344528;
   table_id_t table_id_;
   std::string table_name_;
   page_id_t root_page_id_;
+  vector<uint32_t> primary_key_map;
   Schema *schema_;
 };
 
@@ -60,6 +61,8 @@ public:
     table_meta_ = table_meta;
     table_heap_ = table_heap;
   }
+
+  inline vector<uint32_t> &GetPrimaryKeyMap() const { return table_meta_->primary_key_map; }
 
   inline TableHeap *GetTableHeap() const { return table_heap_; }
 

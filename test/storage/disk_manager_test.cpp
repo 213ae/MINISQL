@@ -8,6 +8,7 @@ TEST(DiskManagerTest, BitMapPageTest) {
   char buf[size];
   memset(buf, 0, size);
   auto *bitmap = reinterpret_cast<BitmapPage<size> *>(buf);
+  bitmap->Init();
   auto num_pages = BitmapPage<size>::GetMaxSupportedSize();
   for (uint32_t i = 0; i < num_pages; i++) {
     ASSERT_TRUE(bitmap->IsPageFree(i));
@@ -37,7 +38,7 @@ TEST(DiskManagerTest, FreePageAllocationTest) {
   //sleep(5);
   std::string db_name = "disk_test.db";
   DiskManager *disk_mgr = new DiskManager(db_name);
-  int extent_nums = 5;
+  int extent_nums = 2;
   for (uint32_t i = 0; i < DiskManager::BITMAP_SIZE * extent_nums; i++) {
     page_id_t page_id = disk_mgr->AllocatePage();
     DiskFileMetaPage *meta_page = reinterpret_cast<DiskFileMetaPage *>(disk_mgr->GetMetaData());
@@ -45,6 +46,14 @@ TEST(DiskManagerTest, FreePageAllocationTest) {
     EXPECT_EQ(i / DiskManager::BITMAP_SIZE + 1, meta_page->GetExtentNums());
     EXPECT_EQ(i + 1, meta_page->GetAllocatedPages());
     EXPECT_EQ(i % DiskManager::BITMAP_SIZE + 1, meta_page->GetExtentUsedPage(i / DiskManager::BITMAP_SIZE));
+    LOG_EVERY_N(INFO, 5000) << i;
+  }
+  for (uint32_t i = 0; i < DiskManager::BITMAP_SIZE * extent_nums / 5; i++) {
+    disk_mgr->DeAllocatePage(i * 5);
+    LOG_EVERY_N(INFO, 5000) << i;
+  }
+  for (uint32_t i = 0; i < DiskManager::BITMAP_SIZE * extent_nums / 5; i++) {
+    disk_mgr->AllocatePage();
     LOG_EVERY_N(INFO, 5000) << i;
   }
   disk_mgr->DeAllocatePage(0);

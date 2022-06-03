@@ -5,6 +5,7 @@
 BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager)
         : pool_size_(pool_size), disk_manager_(disk_manager) {
   pages_ = new Page[pool_size_];
+  //replacer_ = new LRUReplacer(pool_size_);
   replacer_ = new LRUReplacer(pool_size_);
   for (size_t i = 0; i < pool_size_; i++) {
     free_list_.emplace_back(i);
@@ -54,15 +55,15 @@ Page *BufferPoolManager::FetchPage(page_id_t page_id) {
     if(replacer_->Victim(&frame_id_will_used)){
       // 2.     If R is dirty, write it back to the disk.
       if(pages_[frame_id_will_used].IsDirty()){
-        disk_manager_->WritePage(page_table_[frame_id_will_used],pages_[frame_id_will_used].data_);
+        disk_manager_->WritePage(pages_[frame_id_will_used].page_id_,pages_[frame_id_will_used].data_);
         pages_[frame_id_will_used].is_dirty_ = false;
       }
+      // 3.     Delete R from the page table and insert P.
+      page_table_.erase(pages_[frame_id_will_used].page_id_);
       // 4.     Update P's metadata, read in the page content from disk, and then return a pointer to P.
       disk_manager_->ReadPage(page_id, pages_[frame_id_will_used].data_);
-      pages_[frame_id_will_used].page_id_ = page_id;
-      // 3.     Delete R from the page table and insert P.
-      page_table_.erase(frame_id_will_used);
       page_table_.insert(pair(page_id, frame_id_will_used));
+      pages_[frame_id_will_used].page_id_ = page_id;
       replacer_->Pin(frame_id_will_used);
       pages_[frame_id_will_used].pin_count_++;
       return &pages_[frame_id_will_used];
@@ -91,14 +92,14 @@ Page *BufferPoolManager::NewPage(page_id_t &page_id) {
   }else{
     if(replacer_->Victim(&frame_id_will_used)){
       if(pages_[frame_id_will_used].IsDirty()){
-        disk_manager_->WritePage(page_table_[frame_id_will_used],pages_[frame_id_will_used].data_);
+        disk_manager_->WritePage(pages_[frame_id_will_used].page_id_,pages_[frame_id_will_used].data_);
         pages_[frame_id_will_used].is_dirty_ = false;
       }
       // 3.   Update P's metadata, zero out memory and add P to the page table.
       page_id = AllocatePage();
       pages_[frame_id_will_used].ResetMemory();
+      page_table_.erase(pages_[frame_id_will_used].page_id_);
       pages_[frame_id_will_used].page_id_ = page_id;
-      page_table_.erase(frame_id_will_used);
       page_table_.insert(pair(page_id, frame_id_will_used));
       // 4.   Set the page ID output parameter. Return a pointer to P.
       replacer_->Pin(frame_id_will_used);

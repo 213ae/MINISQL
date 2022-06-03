@@ -22,6 +22,10 @@ public:
 
   virtual ~TableIterator();
 
+  inline int64_t GetRowId_64() { return rid.Get(); }
+
+  inline Row* GetRow() { return row; }
+
   inline bool operator==(const TableIterator &itr) const { return rid == itr.rid; }
 
   inline bool operator!=(const TableIterator &itr) const { return !(*this == itr); }

@@ -1603,8 +1603,8 @@ void LogMessage::Init(const char* file,
       data_ = allocated_;
     }
 #else // !defined(GLOG_THREAD_LOCAL_STORAGE)
-    allocated_ = new LogMessageData();
-    data_ = allocated_;
+    mempool = new LogMessageData();
+    data_ = mempool;
 #endif // defined(GLOG_THREAD_LOCAL_STORAGE)
     data_->first_fatal_ = false;
   } else {
@@ -1706,7 +1706,7 @@ LogMessage::~LogMessage() {
     delete allocated_;
   }
 #else // !defined(GLOG_THREAD_LOCAL_STORAGE)
-  delete allocated_;
+  delete mempool;
 #endif // defined(GLOG_THREAD_LOCAL_STORAGE)
 }
 

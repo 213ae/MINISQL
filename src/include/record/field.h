@@ -3,11 +3,11 @@
 
 #include <cstring>
 #include <iostream>
+#include <string>
 #include "common/config.h"
 #include "common/macros.h"
 #include "record/types.h"
 #include "record/type_id.h"
-
 class Field {
   friend class Type;
 
@@ -70,7 +70,10 @@ public:
       value_.chars_ = new char[len_];
       memcpy(value_.chars_, other.value_.chars_, len_);
     } else {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
       value_ = other.value_;
+#pragma GCC diagnostic pop
     }
   }
 
@@ -90,6 +93,20 @@ public:
       case 2: std::cout << value_.float_ << " "; break;
       case 3: std::cout << value_.chars_ << " "; break;
       default: break;
+    }
+  }
+
+  inline std::string GetFieldValue(){
+    switch (type_id_) {
+      case 1: return std::to_string(value_.integer_);
+      case 2: return std::to_string(value_.float_);
+      case 3: {
+        char temp[len_ + 1];
+        memcpy(temp, value_.chars_, len_);
+        temp[len_] = '\0';
+        return temp;
+      }
+      default: return {};
     }
   }
 
@@ -151,7 +168,6 @@ protected:
   uint32_t len_;
   bool is_null_{false};
   bool manage_data_{false};
-public:
   union Val {
     int32_t integer_;
     float float_;

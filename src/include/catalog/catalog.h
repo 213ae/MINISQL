@@ -72,15 +72,19 @@ public:
 
   ~CatalogManager();
 
-  dberr_t CreateTable(const std::string &table_name, TableSchema *schema, Transaction *txn, TableInfo *&table_info);
+  dberr_t CreateTable(const std::string &table_name, TableSchema *schema, Transaction *txn, TableInfo *&table_info, vector<uint32_t> primary_key_map = {0});
 
   dberr_t GetTable(const std::string &table_name, TableInfo *&table_info);
 
   dberr_t GetTables(std::vector<TableInfo *> &tables) const;
 
   dberr_t CreateIndex(const std::string &table_name, const std::string &index_name,
-                      const std::vector<std::string> &index_keys, Transaction *txn,
-                      IndexInfo *&index_info);
+                      const vector<string>& index_keys, Transaction *txn,
+                      IndexInfo *&index_info, const string& index_type = "bptree");
+
+  dberr_t CreateIndex(const std::string &table_name, const std::string &index_name,
+                      const vector<uint32_t>& key_map, Transaction *txn,
+                      IndexInfo *&index_info, const string& index_type = "bptree");
 
   dberr_t GetIndex(const std::string &table_name, const std::string &index_name, IndexInfo *&index_info) const;
 
@@ -104,8 +108,8 @@ private:
   [[maybe_unused]] LockManager *lock_manager_;
   [[maybe_unused]] LogManager *log_manager_;
   [[maybe_unused]] CatalogMeta *catalog_meta_;
-  [[maybe_unused]] std::atomic<table_id_t> next_table_id_;
-  [[maybe_unused]] std::atomic<index_id_t> next_index_id_;
+  [[maybe_unused]] std::atomic<table_id_t> next_table_id_{};
+  [[maybe_unused]] std::atomic<index_id_t> next_index_id_{};
   // map for tables
   std::unordered_map<std::string, table_id_t> table_names_;
   std::unordered_map<table_id_t, TableInfo *> tables_;

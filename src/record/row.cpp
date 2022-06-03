@@ -43,7 +43,7 @@ uint32_t Row::DeserializeFrom(char *buf, Schema *schema) {
   if (field_num == schema->GetColumnCount()) {
     for (uint32_t i = 0; i < field_num; i++){
       if(fields_.size() < field_num) fields_.push_back(nullptr);
-      offset += Field::DeserializeFrom(buf + offset, schema->GetColumn(i)->GetType(), &fields_[i], bitmap[(field_num / 8 + 1) * 8 - i - 1], heap_);
+      offset += Field::DeserializeFrom(buf + offset, schema->GetColumn(i)->GetType(), &fields_[i], bitmap[i], heap_);
     }
   }else{
     LOG(WARNING) << "Illegal row.";

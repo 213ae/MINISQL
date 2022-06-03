@@ -18,6 +18,7 @@
  **/
 
 #include <cstring>
+#include<algorithm>
 #include "common/macros.h"
 #include "common/rowid.h"
 #include "page/page.h"
@@ -27,10 +28,13 @@
 #include "transaction/transaction.h"
 
 class TablePage : public Page {
-public:
+ public:
   /**初始化新页，指定表中前一页的id*/
   void Init(page_id_t page_id, page_id_t prev_id, LogManager *log_mgr, Transaction *txn);
 
+  uint32_t GetFreeSpaceRemaining() {
+    return GetFreeSpacePointer() - SIZE_TABLE_PAGE_HEADER - SIZE_TUPLE * GetTupleCount();
+  }
   page_id_t GetTablePageId() { return *reinterpret_cast<page_id_t *>(GetData()); }
 
   page_id_t GetPrevPageId() { return *reinterpret_cast<page_id_t *>(GetData() + OFFSET_PREV_PAGE_ID); }
@@ -50,9 +54,11 @@ public:
   bool MarkDelete(const RowId &rid, Transaction *txn, LockManager *lock_manager, LogManager *log_manager);
 
   int UpdateTuple(const Row &new_row, Row *old_row, Schema *schema,
-                   Transaction *txn, LockManager *lock_manager, LogManager *log_manager);
+                  Transaction *txn, LockManager *lock_manager, LogManager *log_manager);
 
   void ApplyDelete(const RowId &rid, Transaction *txn, LogManager *log_manager);
+
+  void ApplyDelete(const vector<uint32_t> &slots, Transaction *txn, LogManager *log_manager);
 
   void RollbackDelete(const RowId &rid, Transaction *txn, LogManager *log_manager);
 
@@ -62,7 +68,13 @@ public:
 
   bool GetNextTupleRid(const RowId &cur_rid, RowId *next_rid);
 
-private:
+  uint32_t GetTupleCount() { return *reinterpret_cast<uint32_t *>(GetData() + OFFSET_TUPLE_COUNT); }
+
+  uint32_t GetTupleSize(uint32_t slot_num) {
+    return *reinterpret_cast<uint32_t *>(GetData() + OFFSET_TUPLE_SIZE + SIZE_TUPLE * slot_num);
+  }
+
+ private:
   uint32_t GetFreeSpacePointer() { return *reinterpret_cast<uint32_t *>(GetData() + OFFSET_FREE_SPACE); }
 
   void SetFreeSpacePointer(uint32_t free_space_pointer) {
@@ -70,13 +82,13 @@ private:
   }
 
   /**需要注意的是，TupleCount并非当前页已使用槽数，而是至少分配过一次内容的槽数*/
-  uint32_t GetTupleCount() { return *reinterpret_cast<uint32_t *>(GetData() + OFFSET_TUPLE_COUNT); }
+  //uint32_t GetTupleCount() { return *reinterpret_cast<uint32_t *>(GetData() + OFFSET_TUPLE_COUNT); }
 
   void SetTupleCount(uint32_t tuple_count) { memcpy(GetData() + OFFSET_TUPLE_COUNT, &tuple_count, sizeof(uint32_t)); }
 
-  uint32_t GetFreeSpaceRemaining() {
-    return GetFreeSpacePointer() - SIZE_TABLE_PAGE_HEADER - SIZE_TUPLE * GetTupleCount();
-  }
+  //uint32_t GetFreeSpaceRemaining() {
+  //   return GetFreeSpacePointer() - SIZE_TABLE_PAGE_HEADER - SIZE_TUPLE * GetTupleCount();
+  // }
 
   uint32_t GetTupleOffsetAtSlot(uint32_t slot_num) {
     return *reinterpret_cast<uint32_t *>(GetData() + OFFSET_TUPLE_OFFSET + SIZE_TUPLE * slot_num);
@@ -86,9 +98,9 @@ private:
     memcpy(GetData() + OFFSET_TUPLE_OFFSET + SIZE_TUPLE * slot_num, &offset, sizeof(uint32_t));
   }
 
-  uint32_t GetTupleSize(uint32_t slot_num) {
-    return *reinterpret_cast<uint32_t *>(GetData() + OFFSET_TUPLE_SIZE + SIZE_TUPLE * slot_num);
-  }
+  //uint32_t GetTupleSize(uint32_t slot_num) {
+  //  return *reinterpret_cast<uint32_t *>(GetData() + OFFSET_TUPLE_SIZE + SIZE_TUPLE * slot_num);
+  //}
 
   void SetTupleSize(uint32_t slot_num, uint32_t size) {
     memcpy(GetData() + OFFSET_TUPLE_SIZE + SIZE_TUPLE * slot_num, &size, sizeof(uint32_t));
@@ -100,7 +112,7 @@ private:
 
   static uint32_t UnsetDeletedFlag(uint32_t tuple_size) { return static_cast<uint32_t>(tuple_size & (~DELETE_MASK)); }
 
-private:
+ private:
   static_assert(sizeof(page_id_t) == 4);
   static constexpr uint64_t DELETE_MASK = (1U << (8 * sizeof(uint32_t) - 1));
   static constexpr size_t SIZE_TABLE_PAGE_HEADER = 24;
@@ -112,7 +124,7 @@ private:
   static constexpr size_t OFFSET_TUPLE_OFFSET = 24;
   static constexpr size_t OFFSET_TUPLE_SIZE = 28;
 
-public:
+ public:
   static constexpr size_t SIZE_MAX_ROW = PAGE_SIZE - SIZE_TABLE_PAGE_HEADER - SIZE_TUPLE;
 };
 

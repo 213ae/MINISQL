@@ -16,22 +16,17 @@ bool TablePage::InsertTuple(Row &row, Schema *schema, Transaction *txn,
     return false;
   }
   // Try to find a free slot to reuse.
-  uint32_t i;
-  for (i = 0; i < GetTupleCount(); i++) {
-    // If the slot is empty, i.e. its tuple has size 0,
-    if (GetTupleSize(i) == 0) {
-      // Then we break out of the loop at index i.
-      break;
-    }
-  }
-  if (i == GetTupleCount() && GetFreeSpaceRemaining() < serialized_size + SIZE_TUPLE) {
-    return false;
-  }
   // Otherwise we claim available free space..
   SetFreeSpacePointer(GetFreeSpacePointer() - serialized_size);
   uint32_t __attribute__((unused)) write_bytes = row.SerializeTo(GetData() + GetFreeSpacePointer(), schema);
-  ASSERT(write_bytes == serialized_size, "Unexpected behavior in row serialize.");
+  ASSERT(write_bytes = serialized_size, "Unexpected behavior in row serialize.");
 
+  uint32_t i;
+  if(row.GetRowId().GetPageId() != INVALID_PAGE_ID){
+    i = row.GetRowId().GetSlotNum();
+  }else{
+    i = GetTupleCount();
+  }
   // Set the tuple.
   SetTupleOffsetAtSlot(i, GetFreeSpacePointer());
   SetTupleSize(i, serialized_size);
@@ -39,6 +34,9 @@ bool TablePage::InsertTuple(Row &row, Schema *schema, Transaction *txn,
   row.SetRowId(RowId(GetTablePageId(), i));
   if (i == GetTupleCount()) {
     SetTupleCount(GetTupleCount() + 1);
+  }
+  if(row.GetRowId().GetPageId() == INVALID_PAGE_ID){
+    LOG(INFO) << "Something wrong";
   }
   return true;
 }
@@ -62,7 +60,7 @@ bool TablePage::MarkDelete(const RowId &rid, Transaction *txn, LockManager *lock
 }
 
 int TablePage::UpdateTuple(const Row &new_row, Row *old_row, Schema *schema,
-                            Transaction *txn, LockManager *lock_manager, LogManager *log_manager) {
+                           Transaction *txn, LockManager *lock_manager, LogManager *log_manager) {
   ASSERT(old_row != nullptr && old_row->GetRowId().Get() != INVALID_ROWID.Get(), "invalid old row.");
   uint32_t serialized_size = new_row.GetSerializedSize(schema);
   ASSERT(serialized_size > 0, "Can not have empty row.");
@@ -128,6 +126,32 @@ void TablePage::ApplyDelete(const RowId &rid, Transaction *txn, LogManager *log_
     uint32_t tuple_offset_i = GetTupleOffsetAtSlot(i);
     if (GetTupleSize(i) != 0 && tuple_offset_i < tuple_offset) {
       SetTupleOffsetAtSlot(i, tuple_offset_i + tuple_size);
+    }
+  }
+}
+
+void TablePage::ApplyDelete(const vector<uint32_t> &slots, Transaction *txn, LogManager *log_manager) {
+  uint32_t total_delete_size = 0;
+  for (uint32_t j = 0; j < slots.size() - 1; ++j) {
+    uint32_t slot_num = slots[j];
+    uint32_t tuple_offset = GetTupleOffsetAtSlot(slot_num) + total_delete_size;
+    uint32_t tuple_size= GetTupleSize(slot_num);
+    if (IsDeleted(tuple_size)) {
+      tuple_size = UnsetDeletedFlag(tuple_size);
+    }
+    uint32_t free_space_pointer = GetFreeSpacePointer();
+    ASSERT(tuple_offset >= free_space_pointer, "Free space appears before tuples.");
+    memmove(GetData() + free_space_pointer + tuple_size, GetData() + free_space_pointer,
+            tuple_offset - free_space_pointer);
+    SetFreeSpacePointer(free_space_pointer + tuple_size);
+    SetTupleSize(slot_num, 0);
+    SetTupleOffsetAtSlot(slot_num, 0);
+    total_delete_size += tuple_size;
+    for (uint32_t i = slots[j] + 1; i < slots[j + 1]; ++i) {
+      uint32_t tuple_offset_i = GetTupleOffsetAtSlot(i);
+      if (GetTupleSize(i) != 0 && tuple_offset_i < tuple_offset) {
+        SetTupleOffsetAtSlot(i, tuple_offset_i + total_delete_size);
+      }
     }
   }
 }

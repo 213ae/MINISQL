@@ -21,11 +21,11 @@
  *      | Page N | Free Page BitMap 2 | Page N+1 | ... | Page 2N | ... |
  */
 class DiskManager {
-public:
- /**
+ public:
+  /**
   * 读取存放数据库所有信息的文件，用该文件保存的元信息初始化
   * @param db_file 存放数据库信息的文件名
-  */
+   */
   explicit DiskManager(const std::string &db_file);
 
   ~DiskManager() {
@@ -36,6 +36,7 @@ public:
       if(bitmap_ptr.second == nullptr) {
         std::cout << "Bitmap_ptr is nullptr.";
       }else {
+        delete bitmap_ptr.second->GetDeletedList();
         delete bitmap_ptr.second;
       }
     }
@@ -89,7 +90,7 @@ public:
 
   static constexpr size_t BITMAP_SIZE = BitmapPage<PAGE_SIZE>::GetMaxSupportedSize();
 
-private:
+ private:
   /**
    * Helper function to get disk file size
    */
@@ -110,7 +111,7 @@ private:
    */
   page_id_t MapPageId(page_id_t logical_page_id);
 
-private:
+ private:
   // stream to write db file
   std::fstream db_io_;
   std::string file_name_;

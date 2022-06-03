@@ -7,7 +7,7 @@
 #include "common/macros.h"
 /*todo 使用内存池可以大幅提高内存分配回收效率*/
 class MemHeap {
-public:
+ public:
   virtual ~MemHeap() = default;
 
   /**
@@ -26,7 +26,7 @@ public:
 };
 
 class SimpleMemHeap : public MemHeap {
-public:
+ public:
   ~SimpleMemHeap() {
     for (auto it: allocated_) {
       free(it);
@@ -50,7 +50,7 @@ public:
     }
   }
 
-private:
+ private:
   std::unordered_set<void *> allocated_;
 };
 

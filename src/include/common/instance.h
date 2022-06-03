@@ -14,34 +14,48 @@ class DBStorageEngine {
 public:
   explicit DBStorageEngine(std::string db_name, bool init = true,
                            uint32_t buffer_pool_size = DEFAULT_BUFFER_POOL_SIZE)
-          : db_file_name_(std::move(db_name)), init_(init) {
+          : db_file_name_( db_name), init_(init) {
     // Init database file if needed
     if (init_) {
-      remove(db_file_name_.c_str());
+      remove(("./databases/" + db_file_name_).c_str());
     }
     // Initialize components
-    disk_mgr_ = new DiskManager(db_file_name_);
+    string backup_path = "./databases/." + db_name;
+    fstream backup(backup_path, ios::binary | ios::in | ios::out);
+    if(backup.is_open()){
+      ofstream origin("./databases/" + db_file_name_, ios::binary | ios::trunc | ios::out);
+      origin << backup.rdbuf();
+      origin.close();
+      backup.close();
+    }else{
+      backup.clear();
+      backup.open(backup_path, ios::binary | ios::trunc | ios::out);
+      ifstream origin("./databases/" + db_name, ios::binary | ios::in);
+      backup << origin.rdbuf();
+      origin.close();
+      backup.close();
+    }
+    disk_mgr_ = new DiskManager("./databases/" + db_file_name_);
     bpm_ = new BufferPoolManager(buffer_pool_size, disk_mgr_);
-    catalog_mgr_ = new CatalogManager(bpm_, nullptr, nullptr, init);
     // Allocate static page for db storage engine
     if (init) {
-      [[maybe_unused]] page_id_t id;
-      ASSERT(bpm_->IsPageFree(CATALOG_META_PAGE_ID), "Catalog meta page not free.");
-      ASSERT(bpm_->IsPageFree(INDEX_ROOTS_PAGE_ID), "Header page not free.");
-      ASSERT(bpm_->NewPage(id) != nullptr && id == CATALOG_META_PAGE_ID, "Failed to allocate catalog meta page.");
-      ASSERT(bpm_->NewPage(id) != nullptr && id == INDEX_ROOTS_PAGE_ID, "Failed to allocate header page.");
+      page_id_t id;
+      if(!(bpm_->NewPage(id) != nullptr && id == CATALOG_META_PAGE_ID)) LOG(FATAL) << "Failed to allocate catalog meta page.";
+      if(!(bpm_->NewPage(id) != nullptr && id == INDEX_ROOTS_PAGE_ID)) LOG(FATAL) << "Failed to allocate header page.";
       bpm_->UnpinPage(CATALOG_META_PAGE_ID, false);
       bpm_->UnpinPage(INDEX_ROOTS_PAGE_ID, false);
     } else {
       ASSERT(!bpm_->IsPageFree(CATALOG_META_PAGE_ID), "Invalid catalog meta page.");
       ASSERT(!bpm_->IsPageFree(INDEX_ROOTS_PAGE_ID), "Invalid header page.");
     }
+    catalog_mgr_ = new CatalogManager(bpm_, nullptr, nullptr, init);
   }
 
   ~DBStorageEngine() {
     delete catalog_mgr_;
     delete bpm_;
     delete disk_mgr_;
+    remove(("./databases/." + db_file_name_).c_str());
   }
 
 public:
