@@ -63,11 +63,21 @@ public:
       Field *lhs_value = lhs_key.GetField(i);
       Field *rhs_value = rhs_key.GetField(i);
 
-      if (lhs_value->CompareLessThan(*rhs_value) == CmpBool::kTrue)
+      if (lhs_value->CompareLessThan(*rhs_value) == CmpBool::kTrue) {
+        if (key_schema_->GetColumn(i)->GetType() == kTypeChar) {
+          delete lhs_value->GetData();
+          delete rhs_value->GetData();
+        }
         return -1;
+      }
 
-      if (lhs_value->CompareGreaterThan(*rhs_value) == CmpBool::kTrue)
+      if (lhs_value->CompareGreaterThan(*rhs_value) == CmpBool::kTrue) {
+        if (key_schema_->GetColumn(i)->GetType() == kTypeChar) {
+          delete lhs_value->GetData();
+          delete rhs_value->GetData();
+        }
         return 1;
+      }
     }
     // equals
     return 0;

@@ -22,18 +22,22 @@ public:
     // Initialize components
     string backup_path = "./databases/." + db_name;
     fstream backup(backup_path, ios::binary | ios::in | ios::out);
-    if(backup.is_open()){
-      ofstream origin("./databases/" + db_file_name_, ios::binary | ios::trunc | ios::out);
-      origin << backup.rdbuf();
-      origin.close();
-      backup.close();
-    }else{
-      backup.clear();
-      backup.open(backup_path, ios::binary | ios::trunc | ios::out);
-      ifstream origin("./databases/" + db_name, ios::binary | ios::in);
-      backup << origin.rdbuf();
-      origin.close();
-      backup.close();
+    fstream dbfile("./databases/" + db_file_name_);
+    if (dbfile.is_open()) {
+      if (backup.is_open()) {
+        ofstream origin("./databases/" + db_file_name_, ios::binary | ios::trunc | ios::out);
+        origin << backup.rdbuf();
+        origin.close();
+        backup.close();
+      } else {
+        backup.clear();
+        backup.open(backup_path, ios::binary | ios::trunc | ios::out);
+        ifstream origin("./databases/" + db_name, ios::binary | ios::in);
+        backup << origin.rdbuf();
+        origin.close();
+        backup.close();
+      }
+      dbfile.close();
     }
     disk_mgr_ = new DiskManager("./databases/" + db_file_name_);
     bpm_ = new BufferPoolManager(buffer_pool_size, disk_mgr_);

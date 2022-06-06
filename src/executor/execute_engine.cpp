@@ -6,7 +6,7 @@ inline void PrintTable(const vector<string>& header, const vector<vector<string>
   uint col_num = header.size();
   uint row_num;
   vector<uint> max_width;
-  FILE *fp = fopen("result.txt", "w");
+  [[maybe_unused]]FILE *fp = fopen("result.txt", "w");
   if(output_index.empty()){//全部输出
     row_num = i_col_j_row[0].size();
     for (uint i = 0; i < col_num; ++i) {
@@ -81,7 +81,8 @@ inline void PrintTable(const vector<string>& header, const vector<vector<string>
 }
 inline void PrintInfo(ExecuteContext *context){
   struct timeval end{};
-  gettimeofday(&end, nullptr);
+  if(context->has_end) end = context->end;
+  else gettimeofday(&end, nullptr);
   if(!context->dont_print) {
     if (context->print_flag == 0)
       if (end.tv_usec < context->start.tv_usec)
@@ -817,7 +818,7 @@ void ExecuteEngine::Next(pSyntaxNode ast, ExecuteContext *context) {
               case kTypeChar: {
                 char str[value.length() + 1];
                 strcpy(str, value.c_str());
-                fields.emplace_back(Field(type, str, value.length(), false));
+                fields.emplace_back(Field(type, str, value.length(), true));
                 break;
               }
               default:
@@ -1124,13 +1125,13 @@ dberr_t ExecuteEngine::ExecuteDropDatabase(pSyntaxNode ast, ExecuteContext *cont
   LOG(INFO) << "ExecuteDropDatabase" << std::endl;
 #endif
   context->print_flag = 0;
-  if(!context->dont_print) gettimeofday(&context->start, NULL);
+  if(!context->dont_print) gettimeofday(&context->start, nullptr);
   context->DBname = ast->child_->val_;
   if (context->DBname != nullptr) {
     if (dbs_.find(context->DBname) != dbs_.end()) {
       string deleted_file = "./databases/";
-      deleted_file += context->DBname;
-      remove(deleted_file.c_str());
+      remove((deleted_file + context->DBname).c_str());
+      remove((deleted_file + "." + context->DBname).c_str());
       dbs_.erase(context->DBname);
       context->rows_num++;
       PrintInfo(context);
@@ -1200,7 +1201,7 @@ dberr_t ExecuteEngine::ExecuteShowTables(pSyntaxNode ast, ExecuteContext *contex
     return DB_FAILED;
   }
   context->print_flag = 1;
-  if(!context->dont_print)  gettimeofday(&context->start, NULL);
+  if(!context->dont_print)  gettimeofday(&context->start, nullptr);
   vector<TableInfo*> tables;
   if(dbs_[current_db_]->catalog_mgr_->GetTables(tables) == DB_FAILED) {
     cout << "Empty set (0.00 sec)" << endl;
@@ -1232,7 +1233,7 @@ dberr_t ExecuteEngine::ExecuteCreateTable(pSyntaxNode ast, ExecuteContext *conte
     return DB_FAILED;
   }
   context->print_flag = 0;
-  if(!context->dont_print) gettimeofday(&context->start, NULL);
+  if(!context->dont_print) gettimeofday(&context->start, nullptr);
   context->table_name = ast->child_->val_;
   try{
     Next(ast->child_, context);
@@ -1256,20 +1257,19 @@ dberr_t ExecuteEngine::ExecuteCreateTable(pSyntaxNode ast, ExecuteContext *conte
       IndexInfo* index_info;
       if(!context->key_map.empty()) {
         string index_name = context->table_name;
-        index_name += ".PRIMARY";
+        index_name += "_PRIMARY";
         dbs_[current_db_]->catalog_mgr_->CreateIndex(context->table_name, index_name, context->key_map,
                                                      nullptr, index_info, context->index_type);
         context->rows_num++;
       }
-      /*for(auto i : context->unique_col){
+      for(auto i : context->unique_col){
         string index_name = context->table_name;
-        index_name += ".KEY_ON_'";
+        index_name += "_KEY_ON_";
         index_name += schema.GetColumns()[i]->GetName();
-        index_name += "'";
         dbs_[current_db_]->catalog_mgr_->CreateIndex(context->table_name, index_name, vector<uint>{i},
                                                      nullptr, index_info, context->index_type);
         context->rows_num++;
-      }*/
+      }
       PrintInfo(context);
       for(auto column : context->columns) { delete column; }
       return DB_SUCCESS;
@@ -1315,7 +1315,7 @@ dberr_t ExecuteEngine::ExecuteShowIndexes(pSyntaxNode ast, ExecuteContext *conte
     return DB_FAILED;
   }
   context->print_flag = 1;
-  if(!context->dont_print) gettimeofday(&context->start, NULL);
+  if(!context->dont_print) gettimeofday(&context->start, nullptr);
   vector<TableInfo*> tables;
   if(dbs_[current_db_]->catalog_mgr_->GetTables(tables) == DB_FAILED) {
     cout << "Empty set (0.00 sec)" << endl;
@@ -1359,7 +1359,7 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
     return DB_FAILED;
   }
   context->print_flag = 0;
-  if(!context->dont_print) gettimeofday(&context->start, NULL);
+  if(!context->dont_print) gettimeofday(&context->start, nullptr);
   context->index_name = ast->child_->val_;
   context->table_name = ast->child_->next_->val_;
   TableInfo* table_info;
@@ -1421,7 +1421,7 @@ dberr_t ExecuteEngine::ExecuteDropIndex(pSyntaxNode ast, ExecuteContext *context
     return DB_FAILED;
   }
   context->print_flag = 0;
-  if(!context->dont_print) gettimeofday(&context->start, NULL);
+  if(!context->dont_print) gettimeofday(&context->start, nullptr);
   vector<TableInfo*> tables;
   if(dbs_[current_db_]->catalog_mgr_->GetTables(tables) == DB_FAILED) {
     return DB_FAILED;
@@ -1435,7 +1435,7 @@ dberr_t ExecuteEngine::ExecuteDropIndex(pSyntaxNode ast, ExecuteContext *context
     PrintInfo(context);
     return DB_SUCCESS;
   }else{
-    cout << "Index '"<< context->index_name <<"' doesn't exist" << endl;
+    cout << "Index '"<< index_name <<"' doesn't exist" << endl;
     return DB_FAILED;
   }
 }
@@ -1545,16 +1545,23 @@ dberr_t ExecuteEngine::ExecuteSelect(pSyntaxNode ast, ExecuteContext *context) {
                 back_inserter(temp));
       final_result_index = temp;
     }
+
     context->rows_num += final_result_index.size();
+    gettimeofday(&context->end, nullptr);
+    context->has_end = true;
+
     if(context->rows_num != 0){
       PrintTable(header, output_result, final_result_index);
     }
   }else{
     context->rows_num += output_result[0].size();
+    gettimeofday(&context->end, nullptr);
+    context->has_end = true;
     if(context->rows_num != 0) {
       PrintTable(header, output_result);
     }
   }
+
   PrintInfo(context);
   return DB_SUCCESS;
 }

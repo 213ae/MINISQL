@@ -40,6 +40,7 @@ struct ExecuteContext {
   string index_type{"bptree"};
   //clock_t start;//计时器
   struct timeval start;
+  struct timeval end{};
   int col_id{0};//创建新表时待分配col_id
   uint rows_num{0};//计数器
   bool print_flag{0};//PrintInfo两种不同的输出格式
@@ -48,6 +49,7 @@ struct ExecuteContext {
   bool has_condition{false};
   bool is_and{false};//是否为and，是则在最后一个result_index_container的基础上更新，否或者result_index_container为空创建新container
   bool index_only{true};
+  bool has_end{false};
   vector<uint32_t> key_map;//主键列号，添加索引的列号，select的列号
   vector<uint32_t> unique_col;//unique列的列号
   vector<Column *> columns;//表的模式
