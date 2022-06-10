@@ -2,7 +2,7 @@
 #include "glog/logging.h"
 
 int main(int argc, char **argv) {
-  sleep(5);
+  //sleep(5);
   testing::InitGoogleTest(&argc, argv);
   // testing::GTEST_FLAG(filter) = "BPlusTreeTests*";
   FLAGS_logtostderr = true;

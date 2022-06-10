@@ -79,6 +79,7 @@ inline void PrintTable(const vector<string>& header, const vector<vector<string>
     cout << "Done. The complete result is in 'result.txt'" << endl;
   }
 }
+
 inline void PrintInfo(ExecuteContext *context){
   struct timeval end{};
   if(context->has_end) end = context->end;
@@ -87,25 +88,25 @@ inline void PrintInfo(ExecuteContext *context){
     if (context->print_flag == 0)
       if (end.tv_usec < context->start.tv_usec)
         cout << "Query OK, " << context->rows_num << " row affected (" << end.tv_sec - context->start.tv_sec - 1 << "."
-             << setw(6) << setfill('0') << 1000000 + end.tv_usec - context->start.tv_usec << " sec)" << endl;
+             << setw(6) << setfill('0')  << setiosflags(ios::right) << 1000000 + end.tv_usec - context->start.tv_usec << " sec)" << endl;
       else
         cout << "Query OK, " << context->rows_num << " row affected (" << end.tv_sec - context->start.tv_sec << "."
-             << setw(6) << setfill('0') << end.tv_usec - context->start.tv_usec << " sec)" << endl;
+             << setw(6) << setfill('0') << setiosflags(ios::right) << end.tv_usec - context->start.tv_usec << " sec)" << endl;
     else {
       if (context->rows_num != 0) {
         if (end.tv_usec < context->start.tv_usec)
           cout << context->rows_num << " rows in set (" << end.tv_sec - context->start.tv_sec - 1 << "." << setw(6)
-               << setfill('0') << 1000000 + end.tv_usec - context->start.tv_usec << " sec)" << endl;
+               << setfill('0') << setiosflags(ios::right) << 1000000 + end.tv_usec - context->start.tv_usec << " sec)" << endl;
         else
           cout << context->rows_num << " rows in set (" << end.tv_sec - context->start.tv_sec << "." << setw(6)
-               << setfill('0') << end.tv_usec - context->start.tv_usec << " sec)" << endl;
+               << setfill('0') << setiosflags(ios::right) << end.tv_usec - context->start.tv_usec << " sec)" << endl;
       } else {
         if (end.tv_usec < context->start.tv_usec)
           cout << "Empty set (" << end.tv_sec - context->start.tv_sec - 1 << "." << setw(6) << setfill('0')
-               << 1000000 + end.tv_usec - context->start.tv_usec << " sec)" << endl;
+               << setiosflags(ios::right) << 1000000 + end.tv_usec - context->start.tv_usec << " sec)" << endl;
         else
           cout << "Empty set (" << end.tv_sec - context->start.tv_sec << "." << setw(6) << setfill('0')
-               << end.tv_usec - context->start.tv_usec << " sec)" << endl;
+               << setiosflags(ios::right) << end.tv_usec - context->start.tv_usec << " sec)" << endl;
       }
     }
   }
@@ -189,905 +190,920 @@ void ExecuteEngine::FindConditionColumn(pSyntaxNode ast, ExecuteContext *context
   if(ast->next_ != nullptr) FindConditionColumn(ast->next_, context);
 }
 
-void ExecuteEngine::Next(pSyntaxNode ast, ExecuteContext *context) {
-  switch (ast->type_) {
-    case kNodeColumnDefinition: {
-      bool is_unique = false;
-      if (ast->val_ != nullptr && strcmp("unique", ast->val_) == 0) {
-        is_unique = true;
-        context->unique_col.emplace_back(context->col_id);
+void ExecuteEngine::ExecuteNodeColumnDefinition(pSyntaxNode ast, ExecuteContext *context){
+  bool is_unique = false;
+  if (ast->val_ != nullptr && strcmp("unique", ast->val_) == 0) {
+    is_unique = true;
+    context->unique_col.emplace_back(context->col_id);
+  }
+  string col_name = ast->child_->val_;
+  string type = ast->child_->next_->val_;
+  if (type == "int") {
+    auto *new_column = new Column(col_name, kTypeInt, context->col_id++, false, is_unique);
+    context->columns.emplace_back(new_column);
+  }
+  if (type == "float") {
+    auto *new_column = new Column(col_name, kTypeFloat, context->col_id++, false, is_unique);
+    context->columns.emplace_back(new_column);
+  }
+  if (type == "char") {
+    string len_str = ast->child_->next_->child_->val_;
+    int len = stoi(len_str);
+    if (len > 4000 || len < 0 || len_str.find('-') != string::npos || len_str.find('.') != string::npos)
+      throw invalid_argument("Invalid char length");
+    if (len == 0 && is_unique) throw logic_error("The used storage engine can't index column '" + col_name + "'");
+    auto *new_column = new Column(col_name, kTypeChar, len, context->col_id++, true, is_unique);
+    context->columns.emplace_back(new_column);
+  }
+  if (ast->next_ != nullptr) Next(ast->next_, context);
+}
+
+void ExecuteEngine::ExecuteNodeColumnList(pSyntaxNode ast, ExecuteContext *context){
+  string type = ast->val_;
+  pSyntaxNode temp_ast = ast->child_;
+  while (temp_ast != nullptr) {
+    bool is_exist = false;
+    for (auto col : context->columns) {
+      if (col->GetName() == temp_ast->val_) {
+        context->key_map.emplace_back(col->GetTableInd());
+        is_exist = true;
+        break;
       }
-      string col_name = ast->child_->val_;
-      string type = ast->child_->next_->val_;
-      if (type == "int") {
-        auto *new_column = new Column(col_name, kTypeInt, context->col_id++, false, is_unique);
-        context->columns.emplace_back(new_column);
-      }
-      if (type == "float") {
-        auto *new_column = new Column(col_name, kTypeFloat, context->col_id++, false, is_unique);
-        context->columns.emplace_back(new_column);
-      }
-      if (type == "char") {
-        string len_str = ast->child_->next_->child_->val_;
-        int len = stoi(len_str);
-        if (len > 4000 || len < 0 || len_str.find('-') != string::npos || len_str.find('.') != string::npos)
-          throw invalid_argument("Invalid char length");
-        if (len == 0 && is_unique) throw logic_error("The used storage engine can't index column '" + col_name + "'");
-        auto *new_column = new Column(col_name, kTypeChar, len, context->col_id++, true, is_unique);
-        context->columns.emplace_back(new_column);
-      }
-      if (ast->next_ != nullptr) Next(ast->next_, context);
-      break;
     }
-    case kNodeColumnList: {
-      string type = ast->val_;
-      pSyntaxNode temp_ast = ast->child_;
-      while (temp_ast != nullptr) {
-        bool is_exist = false;
-        for (auto col : context->columns) {
-          if (col->GetName() == temp_ast->val_) {
-            context->key_map.emplace_back(col->GetTableInd());
-            is_exist = true;
-            break;
-          }
-        }
-        if (!is_exist) {
-          if (type == "primary keys" || type == "index keys") {
-            string error_info = "Key column '";
-            error_info += temp_ast->val_;
-            error_info += "' doesn't exist in table";
-            throw invalid_argument(error_info);
-          } else if (type == "select columns") {
-            string error_info = " Unknown column '";
-            error_info += temp_ast->val_;
-            error_info += "' in 'field list'";
-            throw invalid_argument(error_info);
-          }
-        }
-        temp_ast = temp_ast->next_;
-      }
-      if (ast->next_ != nullptr) Next(ast->next_, context);
-      break;
-    }
-    case kNodeConnector: {
-      string connector = ast->val_;
-      if (connector == "and") {
-        if (ast->child_->type_ != kNodeConnector &&
-            context->index_on_one_key.find(ast->child_->child_->val_) != context->index_on_one_key.end()) {
-          Next(ast->child_->next_, context);
-          context->is_and = true;
-          Next(ast->child_, context);
-        } else {
-          Next(ast->child_, context);
-          context->is_and = true;
-          Next(ast->child_->next_, context);
-        }
-      } else if (connector == "or") {
-        Next(ast->child_, context);
-        context->is_and = false;
-        Next(ast->child_->next_, context);
-      }
-      break;
-    }
-    case kNodeCompareOperator: {
-      // context->has_condition = true;
-      string compare_operator = ast->val_;  //<, >, =, <>, <=, >=, is, not
-      string col_name = ast->child_->val_;
-      bool is_exist = false;
-      for (auto col : context->columns) {
-        if (col->GetName() == col_name) {
-          is_exist = true;
-          break;
-        }
-      }
-      if (!is_exist) {
-        string error_info = "Unknown column '";
-        error_info += col_name;
-        error_info += "' in 'where clause'";
+    if (!is_exist) {
+      if (type == "primary keys" || type == "index keys") {
+        string error_info = "Key column '";
+        error_info += temp_ast->val_;
+        error_info += "' doesn't exist in table";
         throw invalid_argument(error_info);
-      }
-      vector<uint32_t> result;
-      if (compare_operator == "is" || compare_operator == "not") {
-        if (compare_operator == "is") {
-          if (context->is_and) {
-            for (auto i : context->result_index_container.back()) {
-              if (context->value_i_of_col_[col_name][i] == "null") result.emplace_back(i);
-            }
-            context->result_index_container.pop_back();
-            context->result_index_container.emplace_back(result);
-          } else {
-            for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
-              if (context->value_i_of_col_[col_name][i] == "null") result.emplace_back(i);
-            }
-            context->result_index_container.emplace_back(result);
-          }
-        } else {
-          if (context->is_and) {
-            for (auto i : context->result_index_container.back()) {
-              if (context->value_i_of_col_[col_name][i] != "null") result.emplace_back(i);
-            }
-            context->result_index_container.pop_back();
-            context->result_index_container.emplace_back(result);
-          } else {
-            for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
-              if (context->value_i_of_col_[col_name][i] != "null") result.emplace_back(i);
-            }
-            context->result_index_container.emplace_back(result);
-          }
-        }
-      } else if (compare_operator == "<" || compare_operator == ">" || compare_operator == "<=" ||
-                 compare_operator == ">=" || compare_operator == "<>" || compare_operator == "=") {
-        TypeId type = kTypeInvalid;
-        string value = ast->child_->next_->val_;
-        for (auto col : context->columns) {
-          if (col->GetName() == col_name) {
-            type = col->GetType();
-          }
-        }
-        if (compare_operator == "<") {
-          if (context->index_on_one_key.find(col_name) != context->index_on_one_key.end()) {
-            vector<Field> fields;
-            switch (type) {
-              case kTypeInt:
-                fields.emplace_back(Field(type, atoi(value.c_str())));
-                break;
-              case kTypeFloat:
-                fields.emplace_back(Field(type, (float)atof(value.c_str())));
-                break;
-              case kTypeChar: {
-                char str[value.length() + 1];
-                strcpy(str, value.c_str());
-                fields.emplace_back(Field(type, str, value.length(), false));
-                break;
-              }
-              default:
-                break;
-            }
-
-            vector<RowId> result_rid;
-            context->index_on_one_key[col_name]->GetIndex()->ScanKey(Row(fields), result_rid, context->txn_, "<");
-            if (!context->index_only) {
-              for (auto rid : result_rid) {
-                result.emplace_back(context->rowid2index_map[rid.Get()]);
-              }
-              sort(result.begin(), result.end());
-              if (context->is_and) {
-                vector<uint> temp_vector;
-                set_intersection(context->result_index_container.back().begin(),
-                                 context->result_index_container.back().end(), result.begin(), result.end(),
-                                 back_inserter(temp_vector));
-                context->result_index_container.pop_back();
-                context->result_index_container.emplace_back(temp_vector);
-              } else {
-                context->result_index_container.emplace_back(result);
-              }
-            } else {
-              sort(result_rid.begin(), result_rid.end(), RowidCompare());
-              if (context->is_and) {
-                vector<RowId> temp_vector;
-                set_intersection(context->result_rids_container.back().begin(),
-                                 context->result_rids_container.back().end(), result_rid.begin(), result_rid.end(),
-                                 back_inserter(temp_vector), RowidCompare());
-                context->result_rids_container.pop_back();
-                context->result_rids_container.emplace_back(temp_vector);
-              } else {
-                context->result_rids_container.emplace_back(result_rid);
-              }
-            }
-
-          } else {
-            if (context->is_and) {
-              switch (type) {
-                case kTypeInt: {
-                  for (auto i : context->result_index_container.back()) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atoi(context->value_i_of_col_[col_name][i].c_str()) < atoi(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeFloat: {
-                  for (auto i : context->result_index_container.back()) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atof(context->value_i_of_col_[col_name][i].c_str()) < atof(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeChar: {
-                  for (auto i : context->result_index_container.back()) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (context->value_i_of_col_[col_name][i] < value) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                default:
-                  break;
-              }
-              context->result_index_container.pop_back();
-              context->result_index_container.emplace_back(result);
-            } else {
-              switch (type) {
-                case kTypeInt: {
-                  for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atoi(context->value_i_of_col_[col_name][i].c_str()) < atoi(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeFloat: {
-                  for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atof(context->value_i_of_col_[col_name][i].c_str()) < atof(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeChar: {
-                  for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (context->value_i_of_col_[col_name][i] < value) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                default:
-                  break;
-              }
-              context->result_index_container.emplace_back(result);
-            }
-          }
-        } else if (compare_operator == "<=") {
-          if (context->index_on_one_key.find(col_name) != context->index_on_one_key.end()) {
-            vector<Field> fields;
-            switch (type) {
-              case kTypeInt:
-                fields.emplace_back(Field(type, atoi(value.c_str())));
-                break;
-              case kTypeFloat:
-                fields.emplace_back(Field(type, (float)atof(value.c_str())));
-                break;
-              case kTypeChar: {
-                char str[value.length() + 1];
-                strcpy(str, value.c_str());
-                fields.emplace_back(Field(type, str, value.length(), false));
-                break;
-              }
-              default:
-                break;
-            }
-
-            vector<RowId> result_rid;
-            context->index_on_one_key[col_name]->GetIndex()->ScanKey(Row(fields), result_rid, context->txn_, "<=");
-            if (!context->index_only) {
-              for (auto rid : result_rid) {
-                result.emplace_back(context->rowid2index_map[rid.Get()]);
-              }
-              sort(result.begin(), result.end());
-              if (context->is_and) {
-                vector<uint> temp_vector;
-                set_intersection(context->result_index_container.back().begin(),
-                                 context->result_index_container.back().end(), result.begin(), result.end(),
-                                 back_inserter(temp_vector));
-                context->result_index_container.pop_back();
-                context->result_index_container.emplace_back(temp_vector);
-              } else {
-                context->result_index_container.emplace_back(result);
-              }
-            } else {
-              sort(result_rid.begin(), result_rid.end(), RowidCompare());
-              if (context->is_and) {
-                vector<RowId> temp_vector;
-                set_intersection(context->result_rids_container.back().begin(),
-                                 context->result_rids_container.back().end(), result_rid.begin(), result_rid.end(),
-                                 back_inserter(temp_vector), RowidCompare());
-                context->result_rids_container.pop_back();
-                context->result_rids_container.emplace_back(temp_vector);
-              } else {
-                context->result_rids_container.emplace_back(result_rid);
-              }
-            }
-          } else {
-            if (context->is_and) {
-              switch (type) {
-                case kTypeInt: {
-                  for (auto i : context->result_index_container.back()) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atoi(context->value_i_of_col_[col_name][i].c_str()) <= atoi(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeFloat: {
-                  for (auto i : context->result_index_container.back()) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atof(context->value_i_of_col_[col_name][i].c_str()) <= atof(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeChar: {
-                  for (auto i : context->result_index_container.back()) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (context->value_i_of_col_[col_name][i] <= value) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                default:
-                  break;
-              }
-              context->result_index_container.pop_back();
-              context->result_index_container.emplace_back(result);
-            } else {
-              switch (type) {
-                case kTypeInt: {
-                  for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atoi(context->value_i_of_col_[col_name][i].c_str()) <= atoi(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeFloat: {
-                  for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atof(context->value_i_of_col_[col_name][i].c_str()) <= atof(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeChar: {
-                  for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (context->value_i_of_col_[col_name][i] <= value) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                default:
-                  break;
-              }
-              context->result_index_container.emplace_back(result);
-            }
-          }
-        } else if (compare_operator == ">") {
-          if (context->index_on_one_key.find(col_name) != context->index_on_one_key.end()) {
-            vector<Field> fields;
-            switch (type) {
-              case kTypeInt:
-                fields.emplace_back(Field(type, atoi(value.c_str())));
-                break;
-              case kTypeFloat:
-                fields.emplace_back(Field(type, (float)atof(value.c_str())));
-                break;
-              case kTypeChar: {
-                char str[value.length() + 1];
-                strcpy(str, value.c_str());
-                fields.emplace_back(Field(type, str, value.length(), false));
-                break;
-              }
-              default:
-                break;
-            }
-
-            vector<RowId> result_rid;
-            context->index_on_one_key[col_name]->GetIndex()->ScanKey(Row(fields), result_rid, context->txn_, ">");
-            if (!context->index_only) {
-              for (auto rid : result_rid) {
-                result.emplace_back(context->rowid2index_map[rid.Get()]);
-              }
-              sort(result.begin(), result.end());
-              if (context->is_and) {
-                vector<uint> temp_vector;
-                set_intersection(context->result_index_container.back().begin(),
-                                 context->result_index_container.back().end(), result.begin(), result.end(),
-                                 back_inserter(temp_vector));
-                context->result_index_container.pop_back();
-                context->result_index_container.emplace_back(temp_vector);
-              } else {
-                context->result_index_container.emplace_back(result);
-              }
-            } else {
-              sort(result_rid.begin(), result_rid.end(), RowidCompare());
-              if (context->is_and) {
-                vector<RowId> temp_vector;
-                set_intersection(context->result_rids_container.back().begin(),
-                                 context->result_rids_container.back().end(), result_rid.begin(), result_rid.end(),
-                                 back_inserter(temp_vector), RowidCompare());
-                context->result_rids_container.pop_back();
-                context->result_rids_container.emplace_back(temp_vector);
-              } else {
-                context->result_rids_container.emplace_back(result_rid);
-              }
-            }
-          } else {
-            if (context->is_and) {
-              switch (type) {
-                case kTypeInt: {
-                  for (auto i : context->result_index_container.back()) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atoi(context->value_i_of_col_[col_name][i].c_str()) > atoi(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeFloat: {
-                  for (auto i : context->result_index_container.back()) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atof(context->value_i_of_col_[col_name][i].c_str()) > atof(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeChar: {
-                  for (auto i : context->result_index_container.back()) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (context->value_i_of_col_[col_name][i] > value) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                default:
-                  break;
-              }
-              context->result_index_container.pop_back();
-              context->result_index_container.emplace_back(result);
-            } else {
-              switch (type) {
-                case kTypeInt: {
-                  for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atoi(context->value_i_of_col_[col_name][i].c_str()) > atoi(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeFloat: {
-                  for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atof(context->value_i_of_col_[col_name][i].c_str()) > atof(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeChar: {
-                  for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (context->value_i_of_col_[col_name][i] > value) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                default:
-                  break;
-              }
-              context->result_index_container.emplace_back(result);
-            }
-          }
-        } else if (compare_operator == ">=") {
-          if (context->index_on_one_key.find(col_name) != context->index_on_one_key.end()) {
-            vector<Field> fields;
-            switch (type) {
-              case kTypeInt:
-                fields.emplace_back(Field(type, atoi(value.c_str())));
-                break;
-              case kTypeFloat:
-                fields.emplace_back(Field(type, (float)atof(value.c_str())));
-                break;
-              case kTypeChar: {
-                char str[value.length() + 1];
-                strcpy(str, value.c_str());
-                fields.emplace_back(Field(type, str, value.length(), false));
-                break;
-              }
-              default:
-                break;
-            }
-
-            vector<RowId> result_rid;
-            context->index_on_one_key[col_name]->GetIndex()->ScanKey(Row(fields), result_rid, context->txn_, ">=");
-            if (!context->index_only) {
-              for (auto rid : result_rid) {
-                result.emplace_back(context->rowid2index_map[rid.Get()]);
-              }
-              sort(result.begin(), result.end());
-              if (context->is_and) {
-                vector<uint> temp_vector;
-                set_intersection(context->result_index_container.back().begin(),
-                                 context->result_index_container.back().end(), result.begin(), result.end(),
-                                 back_inserter(temp_vector));
-                context->result_index_container.pop_back();
-                context->result_index_container.emplace_back(temp_vector);
-              } else {
-                context->result_index_container.emplace_back(result);
-              }
-            } else {
-              sort(result_rid.begin(), result_rid.end(), RowidCompare());
-              if (context->is_and) {
-                vector<RowId> temp_vector;
-                set_intersection(context->result_rids_container.back().begin(),
-                                 context->result_rids_container.back().end(), result_rid.begin(), result_rid.end(),
-                                 back_inserter(temp_vector), RowidCompare());
-                context->result_rids_container.pop_back();
-                context->result_rids_container.emplace_back(temp_vector);
-              } else {
-                context->result_rids_container.emplace_back(result_rid);
-              }
-            }
-          } else {
-            if (context->is_and) {
-              switch (type) {
-                case kTypeInt: {
-                  for (auto i : context->result_index_container.back()) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atoi(context->value_i_of_col_[col_name][i].c_str()) >= atoi(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeFloat: {
-                  for (auto i : context->result_index_container.back()) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atof(context->value_i_of_col_[col_name][i].c_str()) >= atof(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeChar: {
-                  for (auto i : context->result_index_container.back()) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (context->value_i_of_col_[col_name][i] >= value) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                default:
-                  break;
-              }
-              context->result_index_container.pop_back();
-              context->result_index_container.emplace_back(result);
-            } else {
-              switch (type) {
-                case kTypeInt: {
-                  for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atoi(context->value_i_of_col_[col_name][i].c_str()) >= atoi(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeFloat: {
-                  for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atof(context->value_i_of_col_[col_name][i].c_str()) >= atof(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeChar: {
-                  for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (context->value_i_of_col_[col_name][i] >= value) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                default:
-                  break;
-              }
-              context->result_index_container.emplace_back(result);
-            }
-          }
-        } else if (compare_operator == "=") {
-          if (context->index_on_one_key.find(col_name) != context->index_on_one_key.end()) {
-            vector<Field> fields;
-            switch (type) {
-              case kTypeInt:
-                fields.emplace_back(Field(type, atoi(value.c_str())));
-                break;
-              case kTypeFloat:
-                fields.emplace_back(Field(type, (float)atof(value.c_str())));
-                break;
-              case kTypeChar: {
-                char str[value.length() + 1];
-                strcpy(str, value.c_str());
-                fields.emplace_back(Field(type, str, value.length(), true));
-                break;
-              }
-              default:
-                break;
-            }
-
-            vector<RowId> result_rid;
-            context->index_on_one_key[col_name]->GetIndex()->ScanKey(Row(fields), result_rid, context->txn_, "=");
-            if (!context->index_only) {
-              for (auto rid : result_rid) {
-                result.emplace_back(context->rowid2index_map[rid.Get()]);
-              }
-              sort(result.begin(), result.end());
-              if (context->is_and) {
-                vector<uint> temp_vector;
-                set_intersection(context->result_index_container.back().begin(),
-                                 context->result_index_container.back().end(), result.begin(), result.end(),
-                                 back_inserter(temp_vector));
-                context->result_index_container.pop_back();
-                context->result_index_container.emplace_back(temp_vector);
-              } else {
-                context->result_index_container.emplace_back(result);
-              }
-            } else {
-              sort(result_rid.begin(), result_rid.end(), RowidCompare());
-              if (context->is_and) {
-                vector<RowId> temp_vector;
-                set_intersection(context->result_rids_container.back().begin(),
-                                 context->result_rids_container.back().end(), result_rid.begin(), result_rid.end(),
-                                 back_inserter(temp_vector), RowidCompare());
-                context->result_rids_container.pop_back();
-                context->result_rids_container.emplace_back(temp_vector);
-              } else {
-                context->result_rids_container.emplace_back(result_rid);
-              }
-            }
-          } else {
-            if (context->is_and) {
-              switch (type) {
-                case kTypeInt: {
-                  for (auto i : context->result_index_container.back()) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atoi(context->value_i_of_col_[col_name][i].c_str()) == atoi(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeFloat: {
-                  for (auto i : context->result_index_container.back()) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atof(context->value_i_of_col_[col_name][i].c_str()) == atof(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeChar: {
-                  for (auto i : context->result_index_container.back()) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (context->value_i_of_col_[col_name][i] == value) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                default:
-                  break;
-              }
-              context->result_index_container.pop_back();
-              context->result_index_container.emplace_back(result);
-            } else {
-              switch (type) {
-                case kTypeInt: {
-                  for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atoi(context->value_i_of_col_[col_name][i].c_str()) == atoi(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeFloat: {
-                  for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atof(context->value_i_of_col_[col_name][i].c_str()) == atof(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeChar: {
-                  for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (context->value_i_of_col_[col_name][i] == value) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                default:
-                  break;
-              }
-              context->result_index_container.emplace_back(result);
-            }
-          }
-        } else if (compare_operator == "<>") {
-          if (context->index_on_one_key.find(col_name) != context->index_on_one_key.end()) {
-            vector<Field> fields;
-            switch (type) {
-              case kTypeInt:
-                fields.emplace_back(Field(type, atoi(value.c_str())));
-                break;
-              case kTypeFloat:
-                fields.emplace_back(Field(type, (float)atof(value.c_str())));
-                break;
-              case kTypeChar: {
-                char str[value.length() + 1];
-                strcpy(str, value.c_str());
-                fields.emplace_back(Field(type, str, value.length(), false));
-                break;
-              }
-              default:
-                break;
-            }
-
-            vector<RowId> result_rid;
-            if (!context->index_only) {
-              context->index_on_one_key[col_name]->GetIndex()->ScanKey(Row(fields), result_rid, context->txn_, "=");
-              if (context->is_and) {
-                if (context->rowid2index_map.find(result_rid[0].Get()) != context->rowid2index_map.end()) {
-                  context->result_index_container.back().erase(find(context->result_index_container.back().begin(),
-                                                                    context->result_index_container.back().end(),
-                                                                    context->rowid2index_map[result_rid[0].Get()]));
-                }
-              } else {
-                if (!result_rid.empty()) {
-                  for (auto rid_index_pair : context->rowid2index_map) {
-                    if (rid_index_pair.first != result_rid[0].Get()) result.emplace_back(rid_index_pair.second);
-                  }
-                } else {
-                  for (auto rid_index_pair : context->rowid2index_map) {
-                    result.emplace_back(rid_index_pair.second);
-                  }
-                }
-                sort(result.begin(), result.end());
-                context->result_index_container.emplace_back(result);
-              }
-            } else {
-              context->index_on_one_key[col_name]->GetIndex()->ScanKey(Row(fields), result_rid, context->txn_, "<>");
-              sort(result_rid.begin(), result_rid.end(), RowidCompare());
-              if (context->is_and) {
-                vector<RowId> temp_vector;
-                set_intersection(context->result_rids_container.back().begin(),
-                                 context->result_rids_container.back().end(), result_rid.begin(), result_rid.end(),
-                                 back_inserter(temp_vector), RowidCompare());
-                context->result_rids_container.pop_back();
-                context->result_rids_container.emplace_back(temp_vector);
-              } else {
-                context->result_rids_container.emplace_back(result_rid);
-              }
-            }
-          } else {
-            if (context->is_and) {
-              switch (type) {
-                case kTypeInt: {
-                  for (auto i : context->result_index_container.back()) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atoi(context->value_i_of_col_[col_name][i].c_str()) != atoi(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeFloat: {
-                  for (auto i : context->result_index_container.back()) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atof(context->value_i_of_col_[col_name][i].c_str()) != atof(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeChar: {
-                  for (auto i : context->result_index_container.back()) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (context->value_i_of_col_[col_name][i] != value) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                default:
-                  break;
-              }
-              context->result_index_container.pop_back();
-              context->result_index_container.emplace_back(result);
-            } else {
-              switch (type) {
-                case kTypeInt: {
-                  for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atoi(context->value_i_of_col_[col_name][i].c_str()) != atoi(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeFloat: {
-                  for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (atof(context->value_i_of_col_[col_name][i].c_str()) != atof(value.c_str())) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                case kTypeChar: {
-                  for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
-                    if (context->value_i_of_col_[col_name][i] == "null") continue;
-                    if (context->value_i_of_col_[col_name][i] != value) {
-                      result.emplace_back(i);
-                    }
-                  }
-                  break;
-                }
-                default:
-                  break;
-              }
-              context->result_index_container.emplace_back(result);
-            }
-          }
-        } else {
-          throw invalid_argument("Unknown compare operator");
-        }
-      }
-      break;
-    }
-    case kNodeUpdateValue:{
-      string col_name = ast->child_->val_;
-      string value = ast->child_->next_->val_;
-      bool is_exist = false;
-      for (auto col : context->columns) {
-        if (col->GetName() == col_name) {
-          uint col_idx = col->GetTableInd();
-          TypeId type = col->GetType();
-          is_exist = true;
-          switch(type){
-            case kTypeInt: context->update_field_map.emplace(col_idx, Field(type, atoi(value.c_str()))); break;
-            case kTypeFloat: context->update_field_map.emplace(col_idx, Field(type, (float)atof(value.c_str()))); break;
-            case kTypeChar: {
-              char str[value.length() + 1];
-              strcpy(str, value.c_str());
-              context->update_field_map.emplace(col_idx, Field(type, str, value.length(), true));
-              break;
-            }
-            default: break;
-          }
-          break;
-        }
-      }
-      if (!is_exist) {
+      } else if (type == "select columns") {
         string error_info = " Unknown column '";
-        error_info += col_name;
+        error_info += temp_ast->val_;
         error_info += "' in 'field list'";
         throw invalid_argument(error_info);
       }
+    }
+    temp_ast = temp_ast->next_;
+  }
+  if (ast->next_ != nullptr) Next(ast->next_, context);
+}
+
+void ExecuteEngine::ExecuteNodeConnector(pSyntaxNode ast, ExecuteContext *context){
+  string connector = ast->val_;
+  if (connector == "and") {
+    if (ast->child_->type_ != kNodeConnector &&
+        context->index_on_one_key.find(ast->child_->child_->val_) != context->index_on_one_key.end()) {
+      Next(ast->child_->next_, context);
+      context->is_and = true;
+      Next(ast->child_, context);
+    } else {
+      Next(ast->child_, context);
+      context->is_and = true;
+      Next(ast->child_->next_, context);
+    }
+  } else if (connector == "or") {
+    Next(ast->child_, context);
+    context->is_and = false;
+    Next(ast->child_->next_, context);
+  }
+}
+
+void ExecuteEngine::ExecuteNodeUpdateValue(pSyntaxNode ast, ExecuteContext *context){
+  string col_name = ast->child_->val_;
+  string value = ast->child_->next_->val_;
+  bool is_exist = false;
+  for (auto col : context->columns) {
+    if (col->GetName() == col_name) {
+      uint col_idx = col->GetTableInd();
+      TypeId type = col->GetType();
+      is_exist = true;
+      switch(type){
+        case kTypeInt: context->update_field_map.emplace(col_idx, Field(type, atoi(value.c_str()))); break;
+        case kTypeFloat: context->update_field_map.emplace(col_idx, Field(type, (float)atof(value.c_str()))); break;
+        case kTypeChar: {
+          char str[value.length() + 1];
+          strcpy(str, value.c_str());
+          context->update_field_map.emplace(col_idx, Field(type, str, value.length(), true));
+          break;
+        }
+        default: break;
+      }
       break;
     }
+  }
+  if (!is_exist) {
+    string error_info = " Unknown column '";
+    error_info += col_name;
+    error_info += "' in 'field list'";
+    throw invalid_argument(error_info);
+  }
+}
+
+void ExecuteEngine::ExecuteNodeCompareOperator(pSyntaxNode ast, ExecuteContext *context){
+  // context->has_condition = true;
+  string compare_operator = ast->val_;  //<, >, =, <>, <=, >=, is, not
+  string col_name = ast->child_->val_;
+  bool is_exist = false;
+  for (auto col : context->columns) {
+    if (col->GetName() == col_name) {
+      is_exist = true;
+      break;
+    }
+  }
+  if (!is_exist) {
+    string error_info = "Unknown column '";
+    error_info += col_name;
+    error_info += "' in 'where clause'";
+    throw invalid_argument(error_info);
+  }
+  vector<uint32_t> result;
+  if (compare_operator == "is" || compare_operator == "not") {
+    if (compare_operator == "is") {
+      if (context->is_and) {
+        for (auto i : context->result_index_container.back()) {
+          if (context->value_i_of_col_[col_name][i] == "null") result.emplace_back(i);
+        }
+        context->result_index_container.pop_back();
+        context->result_index_container.emplace_back(result);
+      } else {
+        for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
+          if (context->value_i_of_col_[col_name][i] == "null") result.emplace_back(i);
+        }
+        context->result_index_container.emplace_back(result);
+      }
+    } else {
+      if (context->is_and) {
+        for (auto i : context->result_index_container.back()) {
+          if (context->value_i_of_col_[col_name][i] != "null") result.emplace_back(i);
+        }
+        context->result_index_container.pop_back();
+        context->result_index_container.emplace_back(result);
+      } else {
+        for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
+          if (context->value_i_of_col_[col_name][i] != "null") result.emplace_back(i);
+        }
+        context->result_index_container.emplace_back(result);
+      }
+    }
+  } else if (compare_operator == "<" || compare_operator == ">" || compare_operator == "<=" ||
+             compare_operator == ">=" || compare_operator == "<>" || compare_operator == "=") {
+    TypeId type = kTypeInvalid;
+    string value = ast->child_->next_->val_;
+    for (auto col : context->columns) {
+      if (col->GetName() == col_name) {
+        type = col->GetType();
+      }
+    }
+    if (compare_operator == "<") {
+      if (context->index_on_one_key.find(col_name) != context->index_on_one_key.end()) {
+        vector<Field> fields;
+        switch (type) {
+          case kTypeInt:
+            fields.emplace_back(Field(type, atoi(value.c_str())));
+            break;
+          case kTypeFloat:
+            fields.emplace_back(Field(type, (float)atof(value.c_str())));
+            break;
+          case kTypeChar: {
+            char str[value.length() + 1];
+            strcpy(str, value.c_str());
+            fields.emplace_back(Field(type, str, value.length(), false));
+            break;
+          }
+          default:
+            break;
+        }
+
+        vector<RowId> result_rid;
+        context->index_on_one_key[col_name]->GetIndex()->ScanKey(Row(fields), result_rid, context->txn_, "<");
+        if (!context->index_only) {
+          for (auto rid : result_rid) {
+            result.emplace_back(context->rowid2index_map[rid.Get()]);
+          }
+          sort(result.begin(), result.end());
+          if (context->is_and) {
+            vector<uint> temp_vector;
+            set_intersection(context->result_index_container.back().begin(),
+                             context->result_index_container.back().end(), result.begin(), result.end(),
+                             back_inserter(temp_vector));
+            context->result_index_container.pop_back();
+            context->result_index_container.emplace_back(temp_vector);
+          } else {
+            context->result_index_container.emplace_back(result);
+          }
+        } else {
+          sort(result_rid.begin(), result_rid.end(), RowidCompare());
+          if (context->is_and) {
+            vector<RowId> temp_vector;
+            set_intersection(context->result_rids_container.back().begin(),
+                             context->result_rids_container.back().end(), result_rid.begin(), result_rid.end(),
+                             back_inserter(temp_vector), RowidCompare());
+            context->result_rids_container.pop_back();
+            context->result_rids_container.emplace_back(temp_vector);
+          } else {
+            context->result_rids_container.emplace_back(result_rid);
+          }
+        }
+
+      } else {
+        if (context->is_and) {
+          switch (type) {
+            case kTypeInt: {
+              for (auto i : context->result_index_container.back()) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atoi(context->value_i_of_col_[col_name][i].c_str()) < atoi(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeFloat: {
+              for (auto i : context->result_index_container.back()) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atof(context->value_i_of_col_[col_name][i].c_str()) < atof(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeChar: {
+              for (auto i : context->result_index_container.back()) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (context->value_i_of_col_[col_name][i] < value) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            default:
+              break;
+          }
+          context->result_index_container.pop_back();
+          context->result_index_container.emplace_back(result);
+        } else {
+          switch (type) {
+            case kTypeInt: {
+              for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atoi(context->value_i_of_col_[col_name][i].c_str()) < atoi(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeFloat: {
+              for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atof(context->value_i_of_col_[col_name][i].c_str()) < atof(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeChar: {
+              for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (context->value_i_of_col_[col_name][i] < value) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            default:
+              break;
+          }
+          context->result_index_container.emplace_back(result);
+        }
+      }
+    } else if (compare_operator == "<=") {
+      if (context->index_on_one_key.find(col_name) != context->index_on_one_key.end()) {
+        vector<Field> fields;
+        switch (type) {
+          case kTypeInt:
+            fields.emplace_back(Field(type, atoi(value.c_str())));
+            break;
+          case kTypeFloat:
+            fields.emplace_back(Field(type, (float)atof(value.c_str())));
+            break;
+          case kTypeChar: {
+            char str[value.length() + 1];
+            strcpy(str, value.c_str());
+            fields.emplace_back(Field(type, str, value.length(), false));
+            break;
+          }
+          default:
+            break;
+        }
+
+        vector<RowId> result_rid;
+        context->index_on_one_key[col_name]->GetIndex()->ScanKey(Row(fields), result_rid, context->txn_, "<=");
+        if (!context->index_only) {
+          for (auto rid : result_rid) {
+            result.emplace_back(context->rowid2index_map[rid.Get()]);
+          }
+          sort(result.begin(), result.end());
+          if (context->is_and) {
+            vector<uint> temp_vector;
+            set_intersection(context->result_index_container.back().begin(),
+                             context->result_index_container.back().end(), result.begin(), result.end(),
+                             back_inserter(temp_vector));
+            context->result_index_container.pop_back();
+            context->result_index_container.emplace_back(temp_vector);
+          } else {
+            context->result_index_container.emplace_back(result);
+          }
+        } else {
+          sort(result_rid.begin(), result_rid.end(), RowidCompare());
+          if (context->is_and) {
+            vector<RowId> temp_vector;
+            set_intersection(context->result_rids_container.back().begin(),
+                             context->result_rids_container.back().end(), result_rid.begin(), result_rid.end(),
+                             back_inserter(temp_vector), RowidCompare());
+            context->result_rids_container.pop_back();
+            context->result_rids_container.emplace_back(temp_vector);
+          } else {
+            context->result_rids_container.emplace_back(result_rid);
+          }
+        }
+      } else {
+        if (context->is_and) {
+          switch (type) {
+            case kTypeInt: {
+              for (auto i : context->result_index_container.back()) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atoi(context->value_i_of_col_[col_name][i].c_str()) <= atoi(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeFloat: {
+              for (auto i : context->result_index_container.back()) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atof(context->value_i_of_col_[col_name][i].c_str()) <= atof(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeChar: {
+              for (auto i : context->result_index_container.back()) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (context->value_i_of_col_[col_name][i] <= value) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            default:
+              break;
+          }
+          context->result_index_container.pop_back();
+          context->result_index_container.emplace_back(result);
+        } else {
+          switch (type) {
+            case kTypeInt: {
+              for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atoi(context->value_i_of_col_[col_name][i].c_str()) <= atoi(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeFloat: {
+              for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atof(context->value_i_of_col_[col_name][i].c_str()) <= atof(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeChar: {
+              for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (context->value_i_of_col_[col_name][i] <= value) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            default:
+              break;
+          }
+          context->result_index_container.emplace_back(result);
+        }
+      }
+    } else if (compare_operator == ">") {
+      if (context->index_on_one_key.find(col_name) != context->index_on_one_key.end()) {
+        vector<Field> fields;
+        switch (type) {
+          case kTypeInt:
+            fields.emplace_back(Field(type, atoi(value.c_str())));
+            break;
+          case kTypeFloat:
+            fields.emplace_back(Field(type, (float)atof(value.c_str())));
+            break;
+          case kTypeChar: {
+            char str[value.length() + 1];
+            strcpy(str, value.c_str());
+            fields.emplace_back(Field(type, str, value.length(), false));
+            break;
+          }
+          default:
+            break;
+        }
+
+        vector<RowId> result_rid;
+        context->index_on_one_key[col_name]->GetIndex()->ScanKey(Row(fields), result_rid, context->txn_, ">");
+        if (!context->index_only) {
+          for (auto rid : result_rid) {
+            result.emplace_back(context->rowid2index_map[rid.Get()]);
+          }
+          sort(result.begin(), result.end());
+          if (context->is_and) {
+            vector<uint> temp_vector;
+            set_intersection(context->result_index_container.back().begin(),
+                             context->result_index_container.back().end(), result.begin(), result.end(),
+                             back_inserter(temp_vector));
+            context->result_index_container.pop_back();
+            context->result_index_container.emplace_back(temp_vector);
+          } else {
+            context->result_index_container.emplace_back(result);
+          }
+        } else {
+          sort(result_rid.begin(), result_rid.end(), RowidCompare());
+          if (context->is_and) {
+            vector<RowId> temp_vector;
+            set_intersection(context->result_rids_container.back().begin(),
+                             context->result_rids_container.back().end(), result_rid.begin(), result_rid.end(),
+                             back_inserter(temp_vector), RowidCompare());
+            context->result_rids_container.pop_back();
+            context->result_rids_container.emplace_back(temp_vector);
+          } else {
+            context->result_rids_container.emplace_back(result_rid);
+          }
+        }
+      } else {
+        if (context->is_and) {
+          switch (type) {
+            case kTypeInt: {
+              for (auto i : context->result_index_container.back()) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atoi(context->value_i_of_col_[col_name][i].c_str()) > atoi(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeFloat: {
+              for (auto i : context->result_index_container.back()) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atof(context->value_i_of_col_[col_name][i].c_str()) > atof(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeChar: {
+              for (auto i : context->result_index_container.back()) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (context->value_i_of_col_[col_name][i] > value) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            default:
+              break;
+          }
+          context->result_index_container.pop_back();
+          context->result_index_container.emplace_back(result);
+        } else {
+          switch (type) {
+            case kTypeInt: {
+              for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atoi(context->value_i_of_col_[col_name][i].c_str()) > atoi(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeFloat: {
+              for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atof(context->value_i_of_col_[col_name][i].c_str()) > atof(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeChar: {
+              for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (context->value_i_of_col_[col_name][i] > value) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            default:
+              break;
+          }
+          context->result_index_container.emplace_back(result);
+        }
+      }
+    } else if (compare_operator == ">=") {
+      if (context->index_on_one_key.find(col_name) != context->index_on_one_key.end()) {
+        vector<Field> fields;
+        switch (type) {
+          case kTypeInt:
+            fields.emplace_back(Field(type, atoi(value.c_str())));
+            break;
+          case kTypeFloat:
+            fields.emplace_back(Field(type, (float)atof(value.c_str())));
+            break;
+          case kTypeChar: {
+            char str[value.length() + 1];
+            strcpy(str, value.c_str());
+            fields.emplace_back(Field(type, str, value.length(), false));
+            break;
+          }
+          default:
+            break;
+        }
+
+        vector<RowId> result_rid;
+        context->index_on_one_key[col_name]->GetIndex()->ScanKey(Row(fields), result_rid, context->txn_, ">=");
+        if (!context->index_only) {
+          for (auto rid : result_rid) {
+            result.emplace_back(context->rowid2index_map[rid.Get()]);
+          }
+          sort(result.begin(), result.end());
+          if (context->is_and) {
+            vector<uint> temp_vector;
+            set_intersection(context->result_index_container.back().begin(),
+                             context->result_index_container.back().end(), result.begin(), result.end(),
+                             back_inserter(temp_vector));
+            context->result_index_container.pop_back();
+            context->result_index_container.emplace_back(temp_vector);
+          } else {
+            context->result_index_container.emplace_back(result);
+          }
+        } else {
+          sort(result_rid.begin(), result_rid.end(), RowidCompare());
+          if (context->is_and) {
+            vector<RowId> temp_vector;
+            set_intersection(context->result_rids_container.back().begin(),
+                             context->result_rids_container.back().end(), result_rid.begin(), result_rid.end(),
+                             back_inserter(temp_vector), RowidCompare());
+            context->result_rids_container.pop_back();
+            context->result_rids_container.emplace_back(temp_vector);
+          } else {
+            context->result_rids_container.emplace_back(result_rid);
+          }
+        }
+      } else {
+        if (context->is_and) {
+          switch (type) {
+            case kTypeInt: {
+              for (auto i : context->result_index_container.back()) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atoi(context->value_i_of_col_[col_name][i].c_str()) >= atoi(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeFloat: {
+              for (auto i : context->result_index_container.back()) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atof(context->value_i_of_col_[col_name][i].c_str()) >= atof(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeChar: {
+              for (auto i : context->result_index_container.back()) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (context->value_i_of_col_[col_name][i] >= value) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            default:
+              break;
+          }
+          context->result_index_container.pop_back();
+          context->result_index_container.emplace_back(result);
+        } else {
+          switch (type) {
+            case kTypeInt: {
+              for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atoi(context->value_i_of_col_[col_name][i].c_str()) >= atoi(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeFloat: {
+              for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atof(context->value_i_of_col_[col_name][i].c_str()) >= atof(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeChar: {
+              for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (context->value_i_of_col_[col_name][i] >= value) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            default:
+              break;
+          }
+          context->result_index_container.emplace_back(result);
+        }
+      }
+    } else if (compare_operator == "=") {
+      if (context->index_on_one_key.find(col_name) != context->index_on_one_key.end()) {
+        vector<Field> fields;
+        switch (type) {
+          case kTypeInt:
+            fields.emplace_back(Field(type, atoi(value.c_str())));
+            break;
+          case kTypeFloat:
+            fields.emplace_back(Field(type, (float)atof(value.c_str())));
+            break;
+          case kTypeChar: {
+            char str[value.length() + 1];
+            strcpy(str, value.c_str());
+            fields.emplace_back(Field(type, str, value.length(), true));
+            break;
+          }
+          default:
+            break;
+        }
+
+        vector<RowId> result_rid;
+        context->index_on_one_key[col_name]->GetIndex()->ScanKey(Row(fields), result_rid, context->txn_, "=");
+        if (!context->index_only) {
+          for (auto rid : result_rid) {
+            result.emplace_back(context->rowid2index_map[rid.Get()]);
+          }
+          sort(result.begin(), result.end());
+          if (context->is_and) {
+            vector<uint> temp_vector;
+            set_intersection(context->result_index_container.back().begin(),
+                             context->result_index_container.back().end(), result.begin(), result.end(),
+                             back_inserter(temp_vector));
+            context->result_index_container.pop_back();
+            context->result_index_container.emplace_back(temp_vector);
+          } else {
+            context->result_index_container.emplace_back(result);
+          }
+        } else {
+          sort(result_rid.begin(), result_rid.end(), RowidCompare());
+          if (context->is_and) {
+            vector<RowId> temp_vector;
+            set_intersection(context->result_rids_container.back().begin(),
+                             context->result_rids_container.back().end(), result_rid.begin(), result_rid.end(),
+                             back_inserter(temp_vector), RowidCompare());
+            context->result_rids_container.pop_back();
+            context->result_rids_container.emplace_back(temp_vector);
+          } else {
+            context->result_rids_container.emplace_back(result_rid);
+          }
+        }
+      } else {
+        if (context->is_and) {
+          switch (type) {
+            case kTypeInt: {
+              for (auto i : context->result_index_container.back()) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atoi(context->value_i_of_col_[col_name][i].c_str()) == atoi(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeFloat: {
+              for (auto i : context->result_index_container.back()) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atof(context->value_i_of_col_[col_name][i].c_str()) == atof(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeChar: {
+              for (auto i : context->result_index_container.back()) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (context->value_i_of_col_[col_name][i] == value) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            default:
+              break;
+          }
+          context->result_index_container.pop_back();
+          context->result_index_container.emplace_back(result);
+        } else {
+          switch (type) {
+            case kTypeInt: {
+              for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atoi(context->value_i_of_col_[col_name][i].c_str()) == atoi(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeFloat: {
+              for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atof(context->value_i_of_col_[col_name][i].c_str()) == atof(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeChar: {
+              for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (context->value_i_of_col_[col_name][i] == value) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            default:
+              break;
+          }
+          context->result_index_container.emplace_back(result);
+        }
+      }
+    } else if (compare_operator == "<>") {
+      if (context->index_on_one_key.find(col_name) != context->index_on_one_key.end()) {
+        vector<Field> fields;
+        switch (type) {
+          case kTypeInt:
+            fields.emplace_back(Field(type, atoi(value.c_str())));
+            break;
+          case kTypeFloat:
+            fields.emplace_back(Field(type, (float)atof(value.c_str())));
+            break;
+          case kTypeChar: {
+            char str[value.length() + 1];
+            strcpy(str, value.c_str());
+            fields.emplace_back(Field(type, str, value.length(), false));
+            break;
+          }
+          default:
+            break;
+        }
+
+        vector<RowId> result_rid;
+        if (!context->index_only) {
+          context->index_on_one_key[col_name]->GetIndex()->ScanKey(Row(fields), result_rid, context->txn_, "=");
+          if (context->is_and) {
+            if (context->rowid2index_map.find(result_rid[0].Get()) != context->rowid2index_map.end()) {
+              context->result_index_container.back().erase(find(context->result_index_container.back().begin(),
+                                                                context->result_index_container.back().end(),
+                                                                context->rowid2index_map[result_rid[0].Get()]));
+            }
+          } else {
+            if (!result_rid.empty()) {
+              for (auto rid_index_pair : context->rowid2index_map) {
+                if (rid_index_pair.first != result_rid[0].Get()) result.emplace_back(rid_index_pair.second);
+              }
+            } else {
+              for (auto rid_index_pair : context->rowid2index_map) {
+                result.emplace_back(rid_index_pair.second);
+              }
+            }
+            sort(result.begin(), result.end());
+            context->result_index_container.emplace_back(result);
+          }
+        } else {
+          context->index_on_one_key[col_name]->GetIndex()->ScanKey(Row(fields), result_rid, context->txn_, "<>");
+          sort(result_rid.begin(), result_rid.end(), RowidCompare());
+          if (context->is_and) {
+            vector<RowId> temp_vector;
+            set_intersection(context->result_rids_container.back().begin(),
+                             context->result_rids_container.back().end(), result_rid.begin(), result_rid.end(),
+                             back_inserter(temp_vector), RowidCompare());
+            context->result_rids_container.pop_back();
+            context->result_rids_container.emplace_back(temp_vector);
+          } else {
+            context->result_rids_container.emplace_back(result_rid);
+          }
+        }
+      } else {
+        if (context->is_and) {
+          switch (type) {
+            case kTypeInt: {
+              for (auto i : context->result_index_container.back()) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atoi(context->value_i_of_col_[col_name][i].c_str()) != atoi(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeFloat: {
+              for (auto i : context->result_index_container.back()) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atof(context->value_i_of_col_[col_name][i].c_str()) != atof(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeChar: {
+              for (auto i : context->result_index_container.back()) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (context->value_i_of_col_[col_name][i] != value) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            default:
+              break;
+          }
+          context->result_index_container.pop_back();
+          context->result_index_container.emplace_back(result);
+        } else {
+          switch (type) {
+            case kTypeInt: {
+              for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atoi(context->value_i_of_col_[col_name][i].c_str()) != atoi(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeFloat: {
+              for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (atof(context->value_i_of_col_[col_name][i].c_str()) != atof(value.c_str())) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            case kTypeChar: {
+              for (uint i = 0; i < context->value_i_of_col_[col_name].size(); i++) {
+                if (context->value_i_of_col_[col_name][i] == "null") continue;
+                if (context->value_i_of_col_[col_name][i] != value) {
+                  result.emplace_back(i);
+                }
+              }
+              break;
+            }
+            default:
+              break;
+          }
+          context->result_index_container.emplace_back(result);
+        }
+      }
+    } else {
+      throw invalid_argument("Unknown compare operator");
+    }
+  }
+}
+
+void ExecuteEngine::Next(pSyntaxNode ast, ExecuteContext *context) {
+  switch (ast->type_) {
+    case kNodeColumnDefinition:
+      ExecuteNodeColumnDefinition(ast, context);
+      break;
+    case kNodeColumnList:
+      ExecuteNodeColumnList(ast, context);
+      break;
+    case kNodeConnector:
+      ExecuteNodeConnector(ast, context);
+      break;
+    case kNodeCompareOperator:
+      ExecuteNodeCompareOperator(ast, context);
+      break;
+    case kNodeUpdateValue:
+      ExecuteNodeUpdateValue(ast, context);
+      break;
     default: {
       if (ast->child_ != nullptr) Next(ast->child_, context);
       if (ast->next_ != nullptr) Next(ast->next_, context);
@@ -1105,7 +1121,8 @@ void ExecuteEngine::Next(pSyntaxNode ast, ExecuteContext *context) {
   context->DBname = ast->child_->val_;
   if (context->DBname != nullptr) {
     if (dbs_.find(context->DBname) == dbs_.end()) {
-      auto *database = new DBStorageEngine(context->DBname);
+      DBStorageEngine(context->DBname);
+      auto *database = new DBStorageEngine(context->DBname, false);
       dbs_.emplace(pair(context->DBname, database));
       context->rows_num++;
       PrintInfo(context);
@@ -1376,14 +1393,14 @@ dberr_t ExecuteEngine::ExecuteCreateIndex(pSyntaxNode ast, ExecuteContext *conte
   }
   bool is_unique{false};
   bool flag = false;
-  string error_info("(");
+  string error_info("'");
   for(uint ind : context->key_map){
     if(flag) error_info += ", ";
     else flag = true;
     if(context->columns[ind]->IsUnique()) is_unique = true;
     error_info += context->columns[ind]->GetName();
   }
-  error_info += ") is not unique, so you can't create index on it";
+  error_info += "' is not unique, so you can't create index on it";
   if(!is_unique){
     cout << error_info << endl;
     return DB_FAILED;
@@ -1581,7 +1598,7 @@ dberr_t ExecuteEngine::ExecuteInsert(pSyntaxNode ast, ExecuteContext *context) {
   TableInfo* table_info;
   vector<IndexInfo *> indexes;
   if(dbs_[current_db_]->catalog_mgr_->GetTable(table_name, table_info) == DB_TABLE_NOT_EXIST) {
-    cout << "Table '"<< context->table_name <<"' doesn't exist" << endl;
+    cout << "Table '"<< table_name <<"' doesn't exist" << endl;
     return DB_FAILED;
   }
   dbs_[current_db_]->catalog_mgr_->GetTableIndexes(table_name, indexes);

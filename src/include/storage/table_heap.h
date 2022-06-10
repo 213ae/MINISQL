@@ -153,25 +153,26 @@ class TableHeap {
     make_heap(free_space_map.begin(), free_space_map.end());
     while(page_id != INVALID_PAGE_ID)
     {
-      free_space_map.emplace_back(pair(table_page->GetFreeSpaceRemaining(),table_page->GetTablePageId()));
-      push_heap(free_space_map.begin(), free_space_map.end());
-      uint32_t i;
-      vector <uint32_t> free_slot;
-      for (i = 0; i < table_page->GetTupleCount(); i++)
-      {
-        if (table_page->GetTupleSize(i) == 0)
-        {
-          free_slot.push_back(i);
+      if (table_page->GetFreeSpaceRemaining() > 50) {
+        free_space_map.emplace_back(pair(table_page->GetFreeSpaceRemaining(), table_page->GetTablePageId()));
+        push_heap(free_space_map.begin(), free_space_map.end());
+        uint32_t i;
+        vector<uint32_t> free_slot;
+        for (i = 0; i < table_page->GetTupleCount(); i++) {
+          if (table_page->GetTupleSize(i) == 0) {
+            free_slot.push_back(i);
+          }
         }
+        reusable_slot_map.insert(pair(table_page->GetTablePageId(), free_slot));
       }
-      reusable_slot_map.insert(pair(table_page->GetTablePageId(), free_slot));
       buffer_pool_manager->UnpinPage(page_id, false);
+      if(table_page->GetNextPageId() == INVALID_PAGE_ID) {
+        last_page_id = page_id;
+        break;
+      }
       page_id = table_page->GetNextPageId();
-      last_page_id = page_id;
-      if(page_id == INVALID_PAGE_ID) break;
       table_page = reinterpret_cast<TablePage *>(buffer_pool_manager_->FetchPage(page_id));
     }
-    if(page_id != INVALID_PAGE_ID) buffer_pool_manager->UnpinPage(page_id, false);
   }
 
  private:

@@ -29,12 +29,17 @@ void InputCommand(char *input, const int len) {
 }
 
 int main(int argc, char **argv) {
+  cout << "Loading..." << endl;
   InitGoogleLog(argv[0]);
   // command buffer
   const int buf_size = 1024;
   char cmd[buf_size];
   // execute engine
+  struct timeval start{}, end{};
+  gettimeofday(&start, nullptr);
   ExecuteEngine engine;
+  gettimeofday(&end, nullptr);
+  cout << "Done(" <<  end.tv_sec - start.tv_sec << " sec)" << endl;
   // for print syntax tree
   TreeFileManagers syntax_tree_file_mgr("syntax_tree_");
   [[maybe_unused]] uint32_t syntax_tree_id = 0;

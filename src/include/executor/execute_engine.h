@@ -3,7 +3,7 @@
 
 #include <string>
 #include <unordered_map>
-#include<sstream>
+#include <sstream>
 #include <dirent.h>
 #include <iomanip>
 #include <stdexcept>
@@ -83,6 +83,16 @@ public:
   dberr_t Execute(pSyntaxNode ast, ExecuteContext *context);
 
 private:
+  void ExecuteNodeColumnDefinition(pSyntaxNode ast, ExecuteContext *context);
+
+  void ExecuteNodeColumnList(pSyntaxNode ast, ExecuteContext *context);
+
+  void ExecuteNodeConnector(pSyntaxNode ast, ExecuteContext *context);
+
+  void ExecuteNodeUpdateValue(pSyntaxNode ast, ExecuteContext *context);
+
+  void ExecuteNodeCompareOperator(pSyntaxNode ast, ExecuteContext *context);
+
   dberr_t ExecuteCreateDatabase(pSyntaxNode ast, ExecuteContext *context);
 
   dberr_t ExecuteDropDatabase(pSyntaxNode ast, ExecuteContext *context);

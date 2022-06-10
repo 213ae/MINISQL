@@ -3,7 +3,9 @@
 
 #include <memory>
 #include <string>
-
+#include <dirent.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "buffer/buffer_pool_manager.h"
 #include "catalog/catalog.h"
 #include "common/config.h"
@@ -16,6 +18,8 @@ public:
                            uint32_t buffer_pool_size = DEFAULT_BUFFER_POOL_SIZE)
           : db_file_name_( db_name), init_(init) {
     // Init database file if needed
+    DIR *dir;
+    if((dir = opendir("./databases")) == nullptr)  mkdir("./databases",0777);
     if (init_) {
       remove(("./databases/" + db_file_name_).c_str());
     }
