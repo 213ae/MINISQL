@@ -115,10 +115,12 @@ inline void PrintInfo(ExecuteContext *context){
 ExecuteEngine::ExecuteEngine() {
   char path[] = "./databases";
   DIR *dir;
-  if((dir = opendir(path)) == nullptr)  mkdir("./databases",0777);
+  if((dir = opendir(path)) == nullptr) {
+    mkdir("./databases", 0777);
+    dir = opendir(path);
+  }
   struct dirent *stdir;
-  while((stdir = readdir(dir)) != nullptr)
-  {
+  while((stdir = readdir(dir)) != nullptr) {
     if( strcmp( stdir->d_name , "." ) == 0 ||
         strcmp( stdir->d_name , "..") == 0 ||
         stdir->d_name[0] == '.')
@@ -367,7 +369,7 @@ void ExecuteEngine::ExecuteNodeCompareOperator(pSyntaxNode ast, ExecuteContext *
           case kTypeChar: {
             char str[value.length() + 1];
             strcpy(str, value.c_str());
-            fields.emplace_back(Field(type, str, value.length(), false));
+            fields.emplace_back(Field(type, str, value.length(), true));
             break;
           }
           default:
@@ -1112,7 +1114,7 @@ void ExecuteEngine::Next(pSyntaxNode ast, ExecuteContext *context) {
   }
 }
 
-  dberr_t ExecuteEngine::ExecuteCreateDatabase(pSyntaxNode ast, ExecuteContext *context) {
+dberr_t ExecuteEngine::ExecuteCreateDatabase(pSyntaxNode ast, ExecuteContext *context) {
 #ifdef ENABLE_EXECUTE_DEBUG
   LOG(INFO) << "ExecuteCreateDatabase" << std::endl;
 #endif

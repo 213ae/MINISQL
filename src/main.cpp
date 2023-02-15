@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
     ExecuteContext context;
     SyntaxTreePrinter printer(MinisqlGetParserRootNode());
 
-    if(i < 20) printer.PrintTree(syntax_tree_file_mgr[i]);
+    //if(i < 20) printer.PrintTree(syntax_tree_file_mgr[i]);
     engine.Execute(MinisqlGetParserRootNode(), &context);
 
     //sleep(1);
