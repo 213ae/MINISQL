@@ -1,5 +1,7 @@
 #include "catalog/indexes.h"
 
+#include <utility>
+
 IndexMetadata *IndexMetadata::Create(const index_id_t index_id, const string &index_name,
                                      const table_id_t table_id, const vector<uint32_t> &key_map,
                                      MemHeap *heap) {
@@ -59,5 +61,35 @@ uint32_t IndexMetadata::DeserializeFrom(char *buf, IndexMetadata *&index_meta, M
   return offset;
 }
 
-IndexMetadata::IndexMetadata(const index_id_t index_id, const std::string &index_name, const table_id_t table_id,
-                             const std::vector<uint32_t> &key_map) : index_id_(index_id), index_name_(index_name), table_id_(table_id), key_map_(key_map) {}
+IndexMetadata::IndexMetadata(const index_id_t index_id, std::string index_name, const table_id_t table_id,
+                             std::vector<uint32_t> key_map) : index_id_(index_id), index_name_(std::move(index_name)), table_id_(table_id), key_map_(std::move(key_map)) {}
+
+Index *IndexInfo::CreateIndex(BufferPoolManager *buffer_pool_manager, const string& index_type) {
+  size_t max_size = 0;
+  for(auto col : key_schema_->GetColumns()){
+    max_size += col->GetLength();
+  }
+
+  if (index_type == "bptree") {
+    if (max_size <= 8) max_size = 16;
+    else if (max_size <= 24) max_size = 32;
+    else if (max_size <= 56) max_size = 64;
+    else if (max_size <= 120) max_size = 128;
+    else if (max_size <= 248) max_size = 256;
+    else {
+      LOG(ERROR) << "GenericKey size is too large";
+      return nullptr;
+    }
+  }else{ return nullptr; }
+  return ALLOC_P(heap_, BPlusTreeIndex)(meta_data_->index_id_, key_schema_, max_size, buffer_pool_manager);
+}
+
+void IndexInfo::Init(IndexMetadata *meta_data, TableInfo *table_info, BufferPoolManager *buffer_pool_manager, const string& index_type) {
+  // Step1: init index metadata and table info
+  meta_data_ = meta_data;
+  table_info_ = table_info;
+  // Step2: mapping index key to key schema
+  key_schema_ = Schema::ShallowCopySchema(table_info_->GetSchema(), meta_data_->key_map_, heap_);
+  // Step3: call CreateIndex to create the index
+  index_ = CreateIndex(buffer_pool_manager, index_type);
+}

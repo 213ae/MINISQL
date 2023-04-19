@@ -103,7 +103,7 @@ TEST(CatalogTest, CatalogIndexTest) {
     RowId rid(1000, i);
     ASSERT_EQ(DB_SUCCESS, index_info->GetIndex()->InsertEntry(row, rid, nullptr));
   }
-  // Scan Key
+  // Scan GenericKey
   std::vector<RowId> ret;
   for (int i = 0; i < 10; i++) {
     std::vector<Field> fields{

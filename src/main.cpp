@@ -43,7 +43,6 @@ int main(int argc, char **argv) {
   // for print syntax tree
   TreeFileManagers syntax_tree_file_mgr("syntax_tree_");
   [[maybe_unused]] uint32_t syntax_tree_id = 0;
-
   int i = 1;
   while (i++) {
     // read from buffer

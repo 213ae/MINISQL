@@ -2,77 +2,97 @@
 #define MINISQL_GENERIC_KEY_H
 
 #include <cstring>
+#include <malloc.h>
 
 #include "record/row.h"
 #include "record/field.h"
 
-template<size_t KeySize>
 class GenericKey {
-public:
-  inline void SerializeFromKey(const Row &key, Schema *schema) {
+  friend class KeyManager;
+  char data[0];
+};
+
+//class Key16 :public GenericKey{
+//  char data[16];
+//};
+//class Key32 :public GenericKey{
+//  char data[32];
+//};
+//class Key64 :public GenericKey{
+//  char data[64];
+//};/**/
+//class Key128 :public GenericKey{
+//  char data[128];
+//};
+//class Key256 :public GenericKey{
+//  char data[256];
+//};
+
+class KeyManager {
+ public:/**/
+  [[nodiscard]] inline GenericKey * InitKey() const
+  {
+//    switch (key_size_) {
+//      case 16:
+//        return new Key16;
+//      case 32:
+//        return new Key32;
+//      case 64:
+//        return new Key64;
+//      case 128:
+//        return new Key128;
+//      case 256:
+//        return new Key256;
+//    }
+//    return new GenericKey;
+    return (GenericKey *)malloc(key_size_); // remember delete
+  }
+
+  inline void SerializeFromKey(GenericKey *key_buf, const Row &key, Schema *schema) const
+  {
     // initialize to 0
     [[maybe_unused]] uint32_t size = key.GetSerializedSize(schema);
     ASSERT(key.GetFieldCount() == schema->GetColumnCount(), "field nums not match.");
-    ASSERT(size <= KeySize, "Index key size exceed max key size.");
-    memset(data, 0, KeySize);
-    key.SerializeTo(data, schema);
+    ASSERT(size <= (uint32_t)key_size_, "Index key size exceed max key size.");
+    memset(key_buf->data, 0, key_size_);
+    key.SerializeTo(key_buf->data, schema);
   }
 
-  inline void DeserializeToKey(Row &key, Schema *schema) const {
-    [[maybe_unused]] uint32_t ofs = key.DeserializeFrom(const_cast<char *>(data), schema);
-    ASSERT(ofs <= KeySize, "Index key size exceed max key size.");
- }
+  inline void DeserializeToKey(const GenericKey *key_buf, Row &key, Schema *schema) const
+  {
+    [[maybe_unused]] uint32_t ofs = key.DeserializeFrom(const_cast<char *>(key_buf->data), schema);
+    ASSERT(ofs <= (uint32_t)key_size_, "Index key size exceed max key size.");
+  }
 
   // compare
-  inline bool operator==(const GenericKey &other) {
-    return memcmp(data, other.data, KeySize) == 0;
-  }
-
-  // NOTE: for test purpose only
-  // interpret the first 8 bytes as int64_t from data vector
-  inline int64_t ToString() const {
-    return *reinterpret_cast<int64_t *>(const_cast<char *>(data));
-  }
-
-  // NOTE: for test purpose only
-  // interpret the first 8 bytes as int64_t from data vector
-  friend std::ostream &operator<<(std::ostream &os, const GenericKey &key) {
-    os << key.ToString();
-    return os;
-  }
-
-  // actual location of data, extends past the end.
-  char data[KeySize];
-};
-
-/**
- * Function object returns true if lhs < rhs, used for trees
- */
-template<size_t KeySize>
-class GenericComparator {
-public:
-  inline int operator()(const GenericKey<KeySize> &lhs,
-                        const GenericKey<KeySize> &rhs) const {
-    int column_count = key_schema_->GetColumnCount();
+  [[nodiscard]] inline int CompareKeys(const GenericKey *lhs, const GenericKey *rhs) const
+  {
+//    ASSERT(malloc_usable_size((void *)&lhs) == malloc_usable_size((void *)&rhs), "key size not match.");
+    uint32_t column_count = key_schema_->GetColumnCount();
     Row lhs_key(INVALID_ROWID);
     Row rhs_key(INVALID_ROWID);
-    lhs.DeserializeToKey(lhs_key, key_schema_);
-    rhs.DeserializeToKey(rhs_key, key_schema_);
+    DeserializeToKey(lhs, lhs_key, key_schema_);
+    DeserializeToKey(rhs, rhs_key, key_schema_);
 
-    for (int i = 0; i < column_count; i++) {
+    for (uint32_t i = 0; i < column_count; i++)
+    {
       Field *lhs_value = lhs_key.GetField(i);
       Field *rhs_value = rhs_key.GetField(i);
 
-      if (lhs_value->CompareLessThan(*rhs_value) == CmpBool::kTrue) {
-        if (key_schema_->GetColumn(i)->GetType() == kTypeChar) {
+      if (lhs_value->CompareLessThan(*rhs_value) == CmpBool::kTrue)
+      {
+        if (key_schema_->GetColumn(i)->GetType() == kTypeChar)
+        {
           delete lhs_value->GetData();
           delete rhs_value->GetData();
         }
         return -1;
       }
 
-      if (lhs_value->CompareGreaterThan(*rhs_value) == CmpBool::kTrue) {
-        if (key_schema_->GetColumn(i)->GetType() == kTypeChar) {
+      if (lhs_value->CompareGreaterThan(*rhs_value) == CmpBool::kTrue)
+      {
+        if (key_schema_->GetColumn(i)->GetType() == kTypeChar)
+        {
           delete lhs_value->GetData();
           delete rhs_value->GetData();
         }
@@ -83,14 +103,19 @@ public:
     return 0;
   }
 
-  GenericComparator(const GenericComparator &other) {
+  inline int GetKeySize() const {return key_size_;}
+
+  KeyManager(const KeyManager &other)
+  {
     this->key_schema_ = other.key_schema_;
+    this->key_size_ = other.key_size_;
   }
 
   // constructor
-  GenericComparator(Schema *key_schema) : key_schema_(key_schema) {}
+  KeyManager(Schema *key_schema, size_t key_size) : key_size_(key_size), key_schema_(key_schema) {}
 
-private:
+ private:
+  int key_size_;
   Schema *key_schema_;
 };
 

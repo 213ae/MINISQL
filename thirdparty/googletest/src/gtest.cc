@@ -4585,7 +4585,7 @@ void JsonUnitTestResultPrinter::OutputJsonKey(
 
   GTEST_CHECK_(std::find(allowed_names.begin(), allowed_names.end(), name) !=
                    allowed_names.end())
-      << "Key \"" << name << "\" is not allowed for value \"" << element_name
+      << "GenericKey \"" << name << "\" is not allowed for value \"" << element_name
       << "\".";
 
   *stream << indent << "\"" << name << "\": \"" << EscapeJson(value) << "\"";
@@ -4605,7 +4605,7 @@ void JsonUnitTestResultPrinter::OutputJsonKey(
 
   GTEST_CHECK_(std::find(allowed_names.begin(), allowed_names.end(), name) !=
                    allowed_names.end())
-      << "Key \"" << name << "\" is not allowed for value \"" << element_name
+      << "GenericKey \"" << name << "\" is not allowed for value \"" << element_name
       << "\".";
 
   *stream << indent << "\"" << name << "\": " << StreamableToString(value);

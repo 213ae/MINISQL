@@ -2,14 +2,12 @@
 #define MINISQL_B_PLUS_TREE_INDEX_H
 
 #include "index/b_plus_tree.h"
+#include "index/generic_key.h"
 #include "index/index.h"
 
-#define BPLUSTREE_INDEX_TYPE BPlusTreeIndex<KeyType, ValueType, KeyComparator>
-
-INDEX_TEMPLATE_ARGUMENTS
 class BPlusTreeIndex : public Index {
-public:
-  BPlusTreeIndex(index_id_t index_id, IndexSchema *key_schema, BufferPoolManager *buffer_pool_manager);
+ public:
+  BPlusTreeIndex(index_id_t index_id, IndexSchema *key_schema, size_t key_size, BufferPoolManager *buffer_pool_manager);
 
   dberr_t InsertEntry(const Row &key, RowId row_id, Transaction *txn) override;
 
@@ -19,17 +17,17 @@ public:
 
   dberr_t Destroy() override;
 
-  INDEXITERATOR_TYPE GetBeginIterator();
+  IndexIterator GetBeginIterator();
 
-  INDEXITERATOR_TYPE GetBeginIterator(const KeyType &key);
+  IndexIterator GetBeginIterator(GenericKey *key);
 
-  INDEXITERATOR_TYPE GetEndIterator();
+  IndexIterator GetEndIterator();
 
-protected:
+ protected:
   // comparator for key
-  KeyComparator comparator_;
+  KeyManager processor_;
   // container
-  BPLUSTREE_TYPE container_;
+  BPlusTree container_;
 };
 
-#endif //MINISQL_B_PLUS_TREE_INDEX_H
+#endif  // MINISQL_B_PLUS_TREE_INDEX_H

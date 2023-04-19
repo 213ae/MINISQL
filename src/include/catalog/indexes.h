@@ -37,8 +37,8 @@ public:
 private:
   IndexMetadata() = delete;
 
-  explicit IndexMetadata(const index_id_t index_id, const std::string &index_name,
-                         const table_id_t table_id, const std::vector<uint32_t> &key_map) ;
+  explicit IndexMetadata(const index_id_t index_id, std::string index_name,
+                         const table_id_t table_id, std::vector<uint32_t> key_map) ;
 
 private:
   static constexpr uint32_t INDEX_METADATA_MAGIC_NUM = 344528;
@@ -48,8 +48,6 @@ private:
   std::vector<uint32_t> key_map_;  /** The mapping of index key to tuple key */
 };
 
-template <size_t N>
-using BPIndex = BPlusTreeIndex<GenericKey<N>, RowId, GenericComparator<N>>;
 
 /**
  * The IndexInfo class maintains metadata about a index.
@@ -65,15 +63,7 @@ public:
     delete heap_;
   }
 
-  void Init(IndexMetadata *meta_data, TableInfo *table_info, BufferPoolManager *buffer_pool_manager, const string& index_type) {
-    // Step1: init index metadata and table info
-    meta_data_ = meta_data;
-    table_info_ = table_info;
-    // Step2: mapping index key to key schema
-    key_schema_ = Schema::ShallowCopySchema(table_info_->GetSchema(), meta_data_->key_map_, heap_);
-    // Step3: call CreateIndex to create the index
-    index_ = CreateIndex(buffer_pool_manager, index_type);
-  }
+  void Init(IndexMetadata *meta_data, TableInfo *table_info, BufferPoolManager *buffer_pool_manager, const string& index_type);
 
   inline Index *GetIndex() { return index_; }
 
@@ -89,28 +79,7 @@ private:
   explicit IndexInfo() : meta_data_{nullptr}, index_{nullptr}, table_info_{nullptr},
                          key_schema_{nullptr}, heap_(new SimpleMemHeap()) {}
 
-  Index *CreateIndex(BufferPoolManager *buffer_pool_manager, const string& index_type) {
-    uint32_t max_size = 8;
-    for(auto col : key_schema_->GetColumns()){
-      max_size += col->GetLength();
-    }
-    if (index_type == "bptree") {
-      if (max_size <= 8)
-        return ALLOC_P(heap_, BPIndex<16>)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
-      else if (max_size <= 24)
-        return ALLOC_P(heap_, BPIndex<32>)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
-      else if (max_size <= 56)
-        return ALLOC_P(heap_, BPIndex<64>)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
-      else if (max_size <= 120)
-        return ALLOC_P(heap_, BPIndex<128>)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
-      else if (max_size <= 248)
-        return ALLOC_P(heap_, BPIndex<256>)(meta_data_->index_id_, key_schema_, buffer_pool_manager);
-      else {
-        LOG(ERROR) << "Key size is too large";
-        return nullptr;
-      }
-    }else{ return nullptr; }
-  }
+  Index *CreateIndex(BufferPoolManager *buffer_pool_manager, const string& index_type);
 
 private:
   IndexMetadata *meta_data_;

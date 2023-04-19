@@ -13,6 +13,8 @@ public:
 
   RowId(page_id_t page_id, uint32_t slot_num) : page_id_(page_id), slot_num_(slot_num) {}
 
+  RowId(page_id_t page_id): page_id_(page_id){}
+
   explicit RowId(int64_t rid)
           : page_id_(static_cast<page_id_t>(rid >> 32)),
             slot_num_(static_cast<uint32_t>(rid)) {}

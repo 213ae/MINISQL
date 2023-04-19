@@ -234,7 +234,7 @@ void ExecuteEngine::ExecuteNodeColumnList(pSyntaxNode ast, ExecuteContext *conte
     }
     if (!is_exist) {
       if (type == "primary keys" || type == "index keys") {
-        string error_info = "Key column '";
+        string error_info = "GenericKey column '";
         error_info += temp_ast->val_;
         error_info += "' doesn't exist in table";
         throw invalid_argument(error_info);

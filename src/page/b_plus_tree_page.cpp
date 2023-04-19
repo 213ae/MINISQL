@@ -16,6 +16,14 @@ void BPlusTreePage::SetPageType(IndexPageType page_type) {
   page_type_ = page_type;
 }
 
+int BPlusTreePage::GetKeySize() const {
+  return key_size_;
+}
+
+void BPlusTreePage::SetKeySize(int size) {
+  key_size_ = size;
+}
+
 /*
  * Helper methods to get/set size (number of key/value pairs stored in that
  * page)
